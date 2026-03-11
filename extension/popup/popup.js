@@ -242,7 +242,7 @@ async function initMainView(user) {
   main.usernameLabel.textContent = `@${user.username}`;
 
   // The dashboard link points to the user's public profile page on the website.
-  main.linkDashboard.href = `https://cartshare.onrender.com/dashboard.html`;
+  main.linkDashboard.href = `https://www.shoppycat.org/dashboard.html`;
 
   // Wire tab switcher for Add / Share
   initTabSwitcher(views.main);

@@ -21,7 +21,7 @@
     "https://www.amazon.com.au/*",
     "https://*.aliexpress.com/*",
     "https://*.aliexpress.us/*",
-    "http://127.0.0.1:5000/*"
+    "https://www.shoppycat.org/*"
   ],
 
   "background": {
