@@ -6,6 +6,7 @@ Drop-in replacement for UserRepository — same public interface.
 """
 
 from typing import Optional
+import certifi
 from pymongo import MongoClient
 from src.models.user import User
 
@@ -13,7 +14,7 @@ from src.models.user import User
 class MongoUserRepository:
 
     def __init__(self, mongo_uri: str):
-        client = MongoClient(mongo_uri)
+        client = MongoClient(mongo_uri, tlsCAFile=certifi.where())
         db = client.get_default_database()
         self._col = db["users"]
 
