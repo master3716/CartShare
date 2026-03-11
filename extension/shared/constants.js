@@ -16,7 +16,7 @@
 const EXTENSION_CONSTANTS = {
   // Production server on Render — update this before publishing the extension.
   // Example: "https://wishlist-share.onrender.com/api"
-  API_BASE_URL: "https://YOUR-APP-NAME.onrender.com/api",
+  API_BASE_URL: "https://cartshare.onrender.com/api",
 
   // Chrome storage key where we persist the auth token between sessions.
   // chrome.storage.local survives browser restarts (unlike sessionStorage).
