@@ -126,6 +126,10 @@ const main = {
   sharePublic: document.getElementById("share-public"),
   shareError: document.getElementById("share-error"),
   shareSuccess: document.getElementById("share-success"),
+  feedLoading: document.getElementById("feed-loading"),
+  feedEmpty: document.getElementById("feed-empty"),
+  feedError: document.getElementById("feed-error"),
+  feedList: document.getElementById("feed-list"),
 };
 
 // Holds the extracted product data from the current tab.
@@ -238,7 +242,7 @@ async function initMainView(user) {
   main.usernameLabel.textContent = `@${user.username}`;
 
   // The dashboard link points to the user's public profile page on the website.
-  main.linkDashboard.href = `http://127.0.0.1:5500/profile.html?user=${user.username}`;
+  main.linkDashboard.href = `https://cartshare.onrender.com/dashboard.html`;
 
   // Wire tab switcher for Add / Share
   initTabSwitcher(views.main);
@@ -258,6 +262,15 @@ async function initMainView(user) {
 
   // Wire "Share Past Purchase" form
   main.shareForm.addEventListener("submit", shareManualItem);
+
+  // Lazy-load the friend feed when the tab is clicked
+  let feedLoaded = false;
+  views.main.querySelector('[data-tab="tab-feed"]').addEventListener("click", () => {
+    if (!feedLoaded) {
+      feedLoaded = true;
+      loadFriendsFeed();
+    }
+  });
 }
 
 // ------------------------------------------------------------------
@@ -389,6 +402,54 @@ async function shareManualItem(e) {
 }
 
 // ------------------------------------------------------------------
+// Friend feed
+// ------------------------------------------------------------------
+
+async function loadFriendsFeed() {
+  hide(main.feedEmpty);
+  hide(main.feedError);
+  main.feedList.innerHTML = "";
+  show(main.feedLoading);
+
+  const result = await sendToBackground({ type: "GET_FRIENDS_FEED" });
+
+  hide(main.feedLoading);
+
+  if (!result.success) {
+    showError(main.feedError, result.error || "Failed to load feed.");
+    return;
+  }
+
+  const items = result.data || [];
+  if (items.length === 0) {
+    show(main.feedEmpty);
+    return;
+  }
+
+  items.forEach((item) => {
+    main.feedList.appendChild(renderFeedItem(item));
+  });
+}
+
+function renderFeedItem(item) {
+  const el = document.createElement("div");
+  el.className = "feed-item";
+
+  const date = new Date(item.added_at);
+  const dateStr = date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+
+  el.innerHTML = `
+    <div class="feed-meta">
+      <span class="feed-username">@${item.friend_username}</span>
+      <span class="feed-date">${dateStr}</span>
+    </div>
+    <a class="feed-item-name" href="${item.product_url}" target="_blank">${item.item_name}</a>
+    ${item.price ? `<span class="feed-price">${item.price}</span>` : ""}
+  `;
+  return el;
+}
+
+// ------------------------------------------------------------------
 // Entry point: runs when the popup HTML is fully loaded
 // ------------------------------------------------------------------
 
@@ -404,8 +465,18 @@ async function shareManualItem(e) {
       const user = result[EXTENSION_CONSTANTS.STORAGE_KEY_USER];
 
       if (token && user) {
-        // Already logged in
+        // Show main view immediately with cached data for snappy UX,
+        // then validate the token in the background.
         await initMainView(user);
+
+        // Validate token: only log out on a real 401 — not on network errors
+        // (the Render server may be sleeping and take time to wake up).
+        const validation = await sendToBackground({ type: "VALIDATE_TOKEN" });
+        if (!validation.success && !validation.offline) {
+          // Token genuinely rejected by server — force re-login.
+          showView("auth");
+          await initAuthView();
+        }
       } else {
         // Not logged in
         showView("auth");

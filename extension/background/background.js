@@ -41,7 +41,7 @@ importScripts("../shared/constants.js", "../shared/api_client.js");
  */
 function setBadgeAlert() {
   chrome.action.setBadgeText({ text: "!" });
-  chrome.action.setBadgeBackgroundColor({ color: "#4CAF50" });
+  chrome.action.setBadgeBackgroundColor({ color: "#5c58a8" });
 }
 
 /** Clear the badge once the user has acknowledged it (opened the popup). */
@@ -160,6 +160,43 @@ const MESSAGE_HANDLERS = {
   async HEALTH_CHECK(payload, sendResponse) {
     const result = await ApiClient.healthCheck();
     sendResponse({ success: result.ok });
+  },
+
+  /**
+   * Validate the stored token against the server.
+   * - 401 → token is genuinely invalid; clear storage and return success:false.
+   * - Network error (status 0) → server is offline/sleeping; keep session and return offline:true.
+   * - 200 → token is fine; refresh the cached user object.
+   */
+  async VALIDATE_TOKEN(payload, sendResponse) {
+    const result = await ApiClient.getMe();
+    if (result.status === 401) {
+      await chrome.storage.local.remove([
+        EXTENSION_CONSTANTS.STORAGE_KEY_TOKEN,
+        EXTENSION_CONSTANTS.STORAGE_KEY_USER,
+      ]);
+      sendResponse({ success: false, error: "Session expired." });
+    } else if (result.status === 0) {
+      // Network error — server is sleeping; keep the user logged in.
+      sendResponse({ success: true, offline: true });
+    } else if (result.ok) {
+      await chrome.storage.local.set({
+        [EXTENSION_CONSTANTS.STORAGE_KEY_USER]: result.data,
+      });
+      sendResponse({ success: true, data: result.data });
+    } else {
+      sendResponse({ success: false, error: "Validation failed." });
+    }
+  },
+
+  /** Fetch the combined public-purchase feed from all friends. */
+  async GET_FRIENDS_FEED(payload, sendResponse) {
+    const result = await ApiClient.getFriendsFeed();
+    if (result.ok) {
+      sendResponse({ success: true, data: result.data });
+    } else {
+      sendResponse({ success: false, error: result.data?.error || "Failed to load feed." });
+    }
   },
 };
 

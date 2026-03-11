@@ -19,7 +19,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>WishList Share</title>
+  <title>ShoppyCat</title>
   <link rel="stylesheet" href="popup.css" />
 </head>
 <body>
@@ -38,8 +38,8 @@
   ============================================================ -->
   <div id="view-auth" class="view hidden">
     <div class="logo-row">
-      <span class="logo-icon">🛒</span>
-      <h1>WishList Share</h1>
+      <span class="logo-icon">🐱</span>
+      <h1>ShoppyCat</h1>
     </div>
 
     <!-- Tab switcher for Login vs Register -->
@@ -77,7 +77,7 @@
 
     <!-- Server offline warning -->
     <div id="server-warning" class="warning-msg hidden">
-      ⚠️ Cannot reach the server. Make sure it is running at 127.0.0.1:5000
+      ⚠️ Cannot reach the ShoppyCat server. Please try again later.
     </div>
   </div>
 
@@ -95,7 +95,8 @@
     <!-- Tab navigation -->
     <div class="tab-switcher">
       <button class="tab-btn active" data-tab="tab-add">Add Item</button>
-      <button class="tab-btn" data-tab="tab-share">Share Past Purchase</button>
+      <button class="tab-btn" data-tab="tab-share">Share Past</button>
+      <button class="tab-btn" data-tab="tab-feed">Friend Feed</button>
     </div>
 
     <!-- ---- TAB: Add detected item ---- -->
@@ -161,6 +162,16 @@
         <button type="submit" class="btn btn-primary">Add to My List</button>
         <div id="share-success" class="success-msg hidden">✅ Added to your list!</div>
       </form>
+    </div>
+
+    <!-- ---- TAB: Friend Feed ---- -->
+    <div id="tab-feed" class="tab-content hidden">
+      <div id="feed-loading" class="info-box hidden">Loading feed…</div>
+      <div id="feed-empty" class="info-box hidden">
+        <p>Nothing here yet. Add friends to see their recent shares!</p>
+      </div>
+      <div id="feed-error" class="error-msg hidden"></div>
+      <div id="feed-list"></div>
     </div>
 
     <!-- Link to the full website dashboard -->

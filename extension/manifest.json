@@ -2,9 +2,9 @@
   "_comment": "Chrome Extension Manifest V3. This file tells Chrome everything it needs to know about the extension: what it's called, what permissions it needs, which scripts run where, and what the popup looks like.",
 
   "manifest_version": 3,
-  "name": "WishList Share",
-  "version": "1.0.0",
-  "description": "Save items from Amazon and AliExpress to your shared wish list, and see what your friends are buying.",
+  "name": "ShoppyCat",
+  "version": "1.1.0",
+  "description": "Save items from Amazon and AliExpress to your ShoppyCat list, and see what your friends are buying.",
 
   "permissions": [
     "storage",
@@ -55,7 +55,7 @@
   "action": {
     "_comment": "The popup that opens when the user clicks the extension icon in the toolbar.",
     "default_popup": "popup/popup.html",
-    "default_title": "WishList Share",
+    "default_title": "ShoppyCat",
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",
