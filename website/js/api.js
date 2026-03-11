@@ -178,5 +178,9 @@ const Api = (() => {
     async removeFriend(friendId) {
       return request(`/friends/${friendId}`, { method: "DELETE" }, true);
     },
+
+    async clickPurchase(purchaseId) {
+      return request(`/purchases/${purchaseId}/click`, { method: "POST" });
+    },
   };
 })();

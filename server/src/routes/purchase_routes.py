@@ -111,6 +111,16 @@ def create_purchase_blueprint(
             return jsonify({"error": str(exc)}), 400
 
     # ------------------------------------------------------------------
+    # POST /api/purchases/<id>/click  – record a click-through
+    # ------------------------------------------------------------------
+
+    @bp.route("/<purchase_id>/click", methods=["POST"])
+    def click_purchase(purchase_id):
+        """Increment the click counter. No auth required."""
+        purchase_service.increment_click(purchase_id)
+        return jsonify({"message": "ok"}), 200
+
+    # ------------------------------------------------------------------
     # GET /api/purchases/user/<username>  – public profile purchases
     # ------------------------------------------------------------------
 

@@ -87,6 +87,14 @@ class PurchaseRepository(FileRepository):
         self._save_all(all_dicts)
         return purchase
 
+    def increment_click(self, purchase_id: str) -> None:
+        all_dicts = self._get_all_raw()
+        for d in all_dicts:
+            if d["id"] == purchase_id:
+                d["click_count"] = d.get("click_count", 0) + 1
+                self._save_all(all_dicts)
+                return
+
     def delete(self, purchase_id: str) -> bool:
         """Delete a purchase by id. Returns True if something was deleted."""
         all_dicts = self._get_all_raw()

@@ -53,3 +53,6 @@ class MongoPurchaseRepository:
 
     def delete(self, purchase_id: str) -> bool:
         return self._col.delete_one({"_id": purchase_id}).deleted_count > 0
+
+    def increment_click(self, purchase_id: str) -> None:
+        self._col.update_one({"_id": purchase_id}, {"$inc": {"click_count": 1}})

@@ -116,6 +116,10 @@ class PurchaseService:
     # Delete
     # ------------------------------------------------------------------
 
+    def increment_click(self, purchase_id: str) -> None:
+        """Record that someone clicked through to this product."""
+        self._purchase_repo.increment_click(purchase_id)
+
     def delete_purchase(self, purchase_id: str, user_id: str) -> None:
         """
         Delete a purchase.  Verifies ownership first.
