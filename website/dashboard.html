@@ -33,7 +33,31 @@
   <div class="container">
 
     <!-- ============================================================
-         SECTION 1: My Purchases
+         SECTION 1: Friends' Feed
+    ============================================================ -->
+    <section class="card">
+      <div class="section-header">
+        <h2 class="section-title">Friends' Feed</h2>
+        <a href="friends.html" style="font-size:13px;">Manage Friends →</a>
+      </div>
+      <p style="color:#666;font-size:13px;margin-bottom:16px;">
+        What your friends have been buying recently.
+      </p>
+
+      <div id="feed-spinner" class="spinner-wrap">
+        <span class="spinner-sm"></span> Loading…
+      </div>
+
+      <div id="feed-empty" class="empty-state hidden">
+        <div class="icon">👥</div>
+        <p>Nothing here yet.<br />Add friends and their public purchases will appear here.</p>
+      </div>
+
+      <div id="feed-grid" class="purchase-grid"></div>
+    </section>
+
+    <!-- ============================================================
+         SECTION 2: My Purchases
     ============================================================ -->
     <section class="card">
       <div class="section-header">
@@ -56,30 +80,6 @@
       </div>
 
       <div id="my-purchases-grid" class="purchase-grid"></div>
-    </section>
-
-    <!-- ============================================================
-         SECTION 2: Friends' Feed
-    ============================================================ -->
-    <section class="card">
-      <div class="section-header">
-        <h2 class="section-title">Friends' Feed</h2>
-        <a href="friends.html" style="font-size:13px;">Manage Friends →</a>
-      </div>
-      <p style="color:#666;font-size:13px;margin-bottom:16px;">
-        What your friends have been buying recently.
-      </p>
-
-      <div id="feed-spinner" class="spinner-wrap">
-        <span class="spinner-sm"></span> Loading…
-      </div>
-
-      <div id="feed-empty" class="empty-state hidden">
-        <div class="icon">👥</div>
-        <p>Nothing here yet.<br />Add friends and their public purchases will appear here.</p>
-      </div>
-
-      <div id="feed-grid" class="purchase-grid"></div>
     </section>
 
   </div>
