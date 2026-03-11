@@ -115,7 +115,7 @@ def create_auth_blueprint(user_service: UserService, user_repo) -> Blueprint:
         The @auth decorator ensures only logged-in users can call this.
         g.current_user is set by the decorator.
         """
-        user_service.logout(g.current_user)
+        user_service.logout(g.current_user, g.current_token)
         return jsonify({"message": "Logged out successfully."}), 200
 
     return bp

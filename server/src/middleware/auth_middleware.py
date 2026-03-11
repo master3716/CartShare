@@ -67,8 +67,9 @@ def require_auth(user_repo: UserRepository):
             if not user:
                 return jsonify({"error": "Invalid or expired token."}), 401
 
-            # 3. Attach the user to the request context so routes can use it.
+            # 3. Attach the user and token to the request context.
             g.current_user = user
+            g.current_token = token
 
             # 4. Call the actual route handler.
             return f(*args, **kwargs)

@@ -82,16 +82,17 @@ class UserService:
 
         # secrets.token_hex produces a URL-safe hex string.
         token = secrets.token_hex(TOKEN_BYTE_LENGTH)
-        user.token = token
+        user.tokens.append(token)
         self._user_repo.save(user)
         return token
 
-    def logout(self, user: User) -> None:
+    def logout(self, user: User, token: str) -> None:
         """
-        Invalidate the current session by clearing the token in the file.
-        The middleware will no longer be able to look up this token.
+        Invalidate only the specific session token used for this request.
+        Other sessions (e.g. extension while website is logged in) stay active.
         """
-        user.token = None
+        if token in user.tokens:
+            user.tokens.remove(token)
         self._user_repo.save(user)
 
     # ------------------------------------------------------------------

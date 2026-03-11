@@ -78,9 +78,12 @@ class UserRepository(FileRepository):
         """
         Look up which user owns a given auth token.
         Called on every authenticated request by the auth middleware.
+        Supports both the new tokens list and the legacy single-token field.
         """
         raw = next(
-            (d for d in self._get_all_raw() if d.get("token") == token), None
+            (d for d in self._get_all_raw()
+             if token in d.get("tokens", []) or d.get("token") == token),
+            None,
         )
         return User.from_dict(raw) if raw else None
 

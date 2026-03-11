@@ -12,7 +12,6 @@ SOLID – Single Responsibility:
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Optional
 
 
 @dataclass
@@ -38,7 +37,7 @@ class User:
     email: str
     password: str                              # plain text – will be hashed later
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
-    token: Optional[str] = None
+    tokens: list = field(default_factory=list)  # list of active session tokens
     friends: list = field(default_factory=list)
     friend_requests_received: list = field(default_factory=list)
     friend_requests_sent: list = field(default_factory=list)
@@ -60,7 +59,7 @@ class User:
             "username": self.username,
             "email": self.email,
             "password": self.password,
-            "token": self.token,
+            "tokens": self.tokens,
             "friends": self.friends,
             "friend_requests_received": self.friend_requests_received,
             "friend_requests_sent": self.friend_requests_sent,
@@ -82,6 +81,14 @@ class User:
     def from_dict(data: dict) -> "User":
         """
         Re-hydrate a User from a dict that was previously stored in the file.
-        The `**data` unpacking maps each key in the dict to the matching field.
+        Handles migration from old single-token format to new multi-token list.
         """
-        return User(**data)
+        d = dict(data)
+        # Migrate old single-token field to new tokens list
+        if "token" in d:
+            old_token = d.pop("token")
+            if old_token and "tokens" not in d:
+                d["tokens"] = [old_token]
+            elif "tokens" not in d:
+                d["tokens"] = []
+        return User(**d)

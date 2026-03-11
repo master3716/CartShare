@@ -43,7 +43,7 @@ class MongoUserRepository:
         return self._to_user(self._col.find_one({"username": username}))
 
     def find_by_token(self, token: str) -> Optional[User]:
-        return self._to_user(self._col.find_one({"token": token}))
+        return self._to_user(self._col.find_one({"tokens": token}))
 
     def save(self, user: User) -> User:
         doc = self._to_doc(user)
