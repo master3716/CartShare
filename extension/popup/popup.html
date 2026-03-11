@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<!--
+  popup/popup.html
+  -----------------
+  The HTML skeleton for the extension popup.
+  Chrome renders this when the user clicks the extension icon.
+
+  Structure:
+    #view-loading   – spinner shown while we check login state
+    #view-auth      – login / register form (shown when not logged in)
+    #view-main      – main UI (shown when logged in)
+      #tab-add      – "Add Item" tab (pre-filled from the detected product)
+      #tab-share    – "Share Past Purchase" tab (manual URL entry)
+
+  All logic is in popup.js. This file contains NO inline JS or onclick=
+  attributes (Chrome's Content Security Policy for extensions blocks inline JS).
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WishList Share</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+
+  <!-- ============================================================
+       LOADING VIEW
+       Shown briefly while popup.js checks chrome.storage for a token.
+  ============================================================ -->
+  <div id="view-loading" class="view">
+    <div class="spinner"></div>
+    <p>Loading…</p>
+  </div>
+
+  <!-- ============================================================
+       AUTH VIEW  (login / register)
+  ============================================================ -->
+  <div id="view-auth" class="view hidden">
+    <div class="logo-row">
+      <span class="logo-icon">🛒</span>
+      <h1>WishList Share</h1>
+    </div>
+
+    <!-- Tab switcher for Login vs Register -->
+    <div class="tab-switcher">
+      <button class="tab-btn active" data-tab="login-form">Login</button>
+      <button class="tab-btn" data-tab="register-form">Register</button>
+    </div>
+
+    <!-- Login form -->
+    <form id="login-form" class="auth-form">
+      <label for="login-email">Email</label>
+      <input id="login-email" type="email" placeholder="you@example.com" required />
+
+      <label for="login-password">Password</label>
+      <input id="login-password" type="password" placeholder="••••••••" required />
+
+      <div id="login-error" class="error-msg hidden"></div>
+      <button type="submit" class="btn btn-primary">Login</button>
+    </form>
+
+    <!-- Register form (hidden by default) -->
+    <form id="register-form" class="auth-form hidden">
+      <label for="reg-username">Username</label>
+      <input id="reg-username" type="text" placeholder="your_username" required />
+
+      <label for="reg-email">Email</label>
+      <input id="reg-email" type="email" placeholder="you@example.com" required />
+
+      <label for="reg-password">Password</label>
+      <input id="reg-password" type="password" placeholder="••••••••" required />
+
+      <div id="register-error" class="error-msg hidden"></div>
+      <button type="submit" class="btn btn-primary">Create Account</button>
+    </form>
+
+    <!-- Server offline warning -->
+    <div id="server-warning" class="warning-msg hidden">
+      ⚠️ Cannot reach the server. Make sure it is running at 127.0.0.1:5000
+    </div>
+  </div>
+
+  <!-- ============================================================
+       MAIN VIEW  (shown when logged in)
+  ============================================================ -->
+  <div id="view-main" class="view hidden">
+
+    <!-- Top bar: username + logout -->
+    <div class="top-bar">
+      <span id="logged-in-username" class="username-badge"></span>
+      <button id="btn-logout" class="btn btn-ghost btn-sm">Logout</button>
+    </div>
+
+    <!-- Tab navigation -->
+    <div class="tab-switcher">
+      <button class="tab-btn active" data-tab="tab-add">Add Item</button>
+      <button class="tab-btn" data-tab="tab-share">Share Past Purchase</button>
+    </div>
+
+    <!-- ---- TAB: Add detected item ---- -->
+    <div id="tab-add" class="tab-content">
+
+      <!-- If no product was auto-detected we show a prompt to navigate first -->
+      <div id="no-item-detected" class="info-box hidden">
+        <p>Navigate to an Amazon or AliExpress product page, then click the extension icon again.</p>
+      </div>
+
+      <!-- Product preview card (populated by popup.js from the page) -->
+      <div id="item-preview" class="item-card hidden">
+        <img id="preview-image" src="" alt="Product" />
+        <div class="item-details">
+          <p id="preview-name" class="item-name"></p>
+          <p id="preview-price" class="item-price"></p>
+          <p id="preview-platform" class="item-platform"></p>
+        </div>
+      </div>
+
+      <!-- Notes field + visibility toggle -->
+      <div id="add-form" class="hidden">
+        <label for="item-notes">Notes (optional)</label>
+        <input id="item-notes" type="text" placeholder="e.g. Great gift idea!" />
+
+        <label class="checkbox-label">
+          <input id="item-public" type="checkbox" checked />
+          Share with friends (public)
+        </label>
+
+        <div id="add-error" class="error-msg hidden"></div>
+        <button id="btn-add-item" class="btn btn-primary">Save to My List</button>
+        <div id="add-success" class="success-msg hidden">✅ Saved to your list!</div>
+      </div>
+    </div>
+
+    <!-- ---- TAB: Share past purchase (manual URL entry) ---- -->
+    <div id="tab-share" class="tab-content hidden">
+      <p class="hint">Paste a product URL from Amazon or AliExpress to add it to your list.</p>
+
+      <form id="share-form">
+        <label for="share-url">Product URL</label>
+        <input id="share-url" type="url" placeholder="https://www.amazon.com/..." required />
+
+        <label for="share-name">Item Name</label>
+        <input id="share-name" type="text" placeholder="Product name" required />
+
+        <label for="share-price">Price (optional)</label>
+        <input id="share-price" type="text" placeholder="e.g. $29.99" />
+
+        <label for="share-platform">Platform</label>
+        <select id="share-platform">
+          <option value="amazon">Amazon</option>
+          <option value="aliexpress">AliExpress</option>
+        </select>
+
+        <label class="checkbox-label">
+          <input id="share-public" type="checkbox" checked />
+          Share with friends (public)
+        </label>
+
+        <div id="share-error" class="error-msg hidden"></div>
+        <button type="submit" class="btn btn-primary">Add to My List</button>
+        <div id="share-success" class="success-msg hidden">✅ Added to your list!</div>
+      </form>
+    </div>
+
+    <!-- Link to the full website dashboard -->
+    <div class="footer-link">
+      <a id="link-dashboard" href="#" target="_blank">Open Full Dashboard →</a>
+    </div>
+  </div>
+
+  <!-- popup.js must be loaded LAST so the DOM is fully parsed before it runs -->
+  <script src="../shared/constants.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,71 @@
+{
+  "_comment": "Chrome Extension Manifest V3. This file tells Chrome everything it needs to know about the extension: what it's called, what permissions it needs, which scripts run where, and what the popup looks like.",
+
+  "manifest_version": 3,
+  "name": "WishList Share",
+  "version": "1.0.0",
+  "description": "Save items from Amazon and AliExpress to your shared wish list, and see what your friends are buying.",
+
+  "permissions": [
+    "storage",
+    "activeTab"
+  ],
+
+  "host_permissions": [
+    "https://www.amazon.com/*",
+    "https://www.amazon.co.uk/*",
+    "https://www.amazon.de/*",
+    "https://www.amazon.fr/*",
+    "https://www.amazon.co.jp/*",
+    "https://www.amazon.ca/*",
+    "https://www.amazon.com.au/*",
+    "https://*.aliexpress.com/*",
+    "https://*.aliexpress.us/*",
+    "http://127.0.0.1:5000/*"
+  ],
+
+  "background": {
+    "service_worker": "background/background.js",
+    "_comment": "Service workers replace background pages in MV3. They start when needed and shut down when idle to save resources."
+  },
+
+  "content_scripts": [
+    {
+      "_comment": "These scripts are injected INTO the Amazon/AliExpress page DOM. They can read and manipulate the page but cannot directly call the Flask API (different origin). They communicate via Chrome messages to background.js.",
+      "matches": [
+        "https://www.amazon.com/*",
+        "https://www.amazon.co.uk/*",
+        "https://www.amazon.de/*",
+        "https://www.amazon.fr/*",
+        "https://www.amazon.co.jp/*",
+        "https://www.amazon.ca/*",
+        "https://www.amazon.com.au/*",
+        "https://*.aliexpress.com/*",
+        "https://*.aliexpress.us/*"
+      ],
+      "js": [
+        "shared/constants.js",
+        "content_scripts/item_extractor.js",
+        "content_scripts/checkout_detector.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+
+  "action": {
+    "_comment": "The popup that opens when the user clicks the extension icon in the toolbar.",
+    "default_popup": "popup/popup.html",
+    "default_title": "WishList Share",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}
