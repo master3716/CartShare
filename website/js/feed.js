@@ -63,21 +63,31 @@ function buildCard(item) {
 
   // "Me too / also buying" state
   const alsoBuying = item.also_buying || [];
+  const alsoBuyingUsernames = item.also_buying_usernames || [];
   const iAmBuying = currentUserId && alsoBuying.includes(currentUserId);
   const alsoCount = alsoBuying.length;
+
+  const badgeHtml = alsoCount > 0
+    ? `<span class="badge badge-also-buying badge-also-buying-clickable" data-id="${item.id}">🛒 ${alsoCount} ${alsoCount === 1 ? "friend is" : "friends are"} also buying this ▾</span>
+       <div class="also-buying-list hidden" id="also-list-${item.id}">${alsoBuyingUsernames.map(u => `<span class="also-buying-user">@${escapeHtml(u)}</span>`).join("")}</div>`
+    : "";
 
   let alsoBuyingHtml = "";
   if (currentUserId) {
     alsoBuyingHtml = `
       <div class="also-buying-section">
-        ${alsoCount > 0 ? `<span class="badge badge-also-buying">🛒 ${alsoCount} ${alsoCount === 1 ? "friend is" : "friends are"} also buying this</span>` : ""}
+        ${badgeHtml}
         <button class="btn btn-sm btn-ghost btn-also-buying" data-id="${item.id}" data-buying="${iAmBuying}">
           ${iAmBuying ? "✓ Me too — Undo" : "🛒 Me too!"}
         </button>
       </div>
     `;
   } else if (alsoCount > 0) {
-    alsoBuyingHtml = `<div class="also-buying-section"><span class="badge badge-also-buying">🛒 ${alsoCount} ${alsoCount === 1 ? "friend is" : "friends are"} also buying this</span></div>`;
+    alsoBuyingHtml = `
+      <div class="also-buying-section">
+        ${badgeHtml}
+      </div>
+    `;
   }
 
   card.innerHTML = `
@@ -150,19 +160,46 @@ function buildCard(item) {
         const buyers = updated.also_buying || [];
         const count = buyers.length;
         const nowActive = buyers.includes(currentUserId);
+        // Re-fetch usernames list: keep existing usernames and add/remove current user
+        const prevUsernames = Array.from(
+          alsoBuyingBtn.closest(".also-buying-section").querySelectorAll(".also-buying-user")
+        ).map(el => el.textContent.replace("@", ""));
+        const updatedUsernames = nowActive
+          ? [...prevUsernames.filter(u => u !== currentUser.username), currentUser.username]
+          : prevUsernames.filter(u => u !== currentUser.username);
+
         const section = alsoBuyingBtn.closest(".also-buying-section");
+        const newBadgeHtml = count > 0
+          ? `<span class="badge badge-also-buying badge-also-buying-clickable" data-id="${updated.id}">🛒 ${count} ${count === 1 ? "friend is" : "friends are"} also buying this ▾</span>
+             <div class="also-buying-list hidden" id="also-list-${updated.id}">${updatedUsernames.map(u => `<span class="also-buying-user">@${escapeHtml(u)}</span>`).join("")}</div>`
+          : "";
         section.innerHTML = `
-          ${count > 0 ? `<span class="badge badge-also-buying">🛒 ${count} ${count === 1 ? "friend is" : "friends are"} also buying this</span>` : ""}
+          ${newBadgeHtml}
           <button class="btn btn-sm btn-ghost btn-also-buying" data-id="${updated.id}" data-buying="${nowActive}">
             ${nowActive ? "✓ Me too — Undo" : "🛒 Me too!"}
           </button>
         `;
-        section.querySelector(".btn-also-buying").addEventListener("click", arguments.callee);
+        const newBtn = section.querySelector(".btn-also-buying");
+        newBtn.addEventListener("click", arguments.callee);
+        const newBadge = section.querySelector(".badge-also-buying-clickable");
+        if (newBadge) newBadge.addEventListener("click", toggleAlsoBuyingList);
       } else {
         alsoBuyingBtn.disabled = false;
         alert(result.data && result.data.error ? result.data.error : "Could not update.");
       }
     });
+  }
+
+  // Toggle the "who's buying" dropdown when clicking the badge
+  function toggleAlsoBuyingList(e) {
+    const purchaseId = e.currentTarget.dataset.id;
+    const list = card.querySelector(`#also-list-${purchaseId}`);
+    if (list) list.classList.toggle("hidden");
+  }
+
+  const alsoBuyingBadge = card.querySelector(".badge-also-buying-clickable");
+  if (alsoBuyingBadge) {
+    alsoBuyingBadge.addEventListener("click", toggleAlsoBuyingList);
   }
 
   // Save to collection button

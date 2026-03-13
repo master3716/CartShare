@@ -169,6 +169,13 @@ class FriendService:
             for purchase in public_purchases:
                 entry = purchase.to_dict()
                 entry["friend_username"] = friend.username
+                # Resolve also_buying user IDs to usernames
+                also_buying_usernames = []
+                for uid in purchase.also_buying:
+                    u = self._user_repo.find_by_id(uid)
+                    if u:
+                        also_buying_usernames.append(u.username)
+                entry["also_buying_usernames"] = also_buying_usernames
                 feed.append(entry)
 
         # Sort the combined feed newest-first

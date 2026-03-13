@@ -131,7 +131,12 @@ a:hover { text-decoration: underline; }
 .badge-temu    { background: #fce4ec; color: #c62828; }
 .badge-shein   { background: #f3e5f5; color: #6a1b9a; }
 .badge-also-buying { background: #e8f5e9; color: #2e7d32; }
+.badge-also-buying-clickable { cursor: pointer; user-select: none; }
+.badge-also-buying-clickable:hover { opacity: 0.85; }
 .also-buying-section { margin-top: 8px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.also-buying-list { width: 100%; display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; padding: 8px; background: #f9f9f9; border-radius: 6px; }
+.also-buying-list.hidden { display: none; }
+.also-buying-user { font-size: 12px; color: #5c58a8; background: #ede7f6; padding: 2px 8px; border-radius: 12px; }
 .collection-category { margin-bottom: 24px; }
 .collection-category-title { font-size: 15px; font-weight: 600; color: #5c58a8; margin-bottom: 10px; }
 
