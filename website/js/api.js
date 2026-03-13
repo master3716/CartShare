@@ -182,5 +182,43 @@ const Api = (() => {
     async clickPurchase(purchaseId) {
       return request(`/purchases/${purchaseId}/click`, { method: "POST" });
     },
+
+    async getComments(purchaseId) {
+      return request(`/purchases/${purchaseId}/comments`);
+    },
+
+    async addComment(purchaseId, text) {
+      return request(`/purchases/${purchaseId}/comments`, {
+        method: "POST",
+        body: JSON.stringify({ text }),
+      }, true);
+    },
+
+    async deleteComment(commentId) {
+      return request(`/comments/${commentId}`, { method: "DELETE" }, true);
+    },
+
+    async giftPurchase(purchaseId) {
+      return request(`/purchases/${purchaseId}/gift`, { method: "POST" }, true);
+    },
+
+    async ungiftPurchase(purchaseId) {
+      return request(`/purchases/${purchaseId}/gift`, { method: "DELETE" }, true);
+    },
+
+    async saveItem(purchaseId, category) {
+      return request("/saved-items", {
+        method: "POST",
+        body: JSON.stringify({ purchase_id: purchaseId, category }),
+      }, true);
+    },
+
+    async getSavedItems() {
+      return request("/saved-items", {}, true);
+    },
+
+    async deleteSavedItem(itemId) {
+      return request(`/saved-items/${itemId}`, { method: "DELETE" }, true);
+    },
   };
 })();

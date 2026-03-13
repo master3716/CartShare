@@ -16,7 +16,7 @@ from src.repositories.purchase_repository import PurchaseRepository
 
 # Valid values for the `platform` field.  Any value outside this set is
 # rejected so we never store garbage data.
-VALID_PLATFORMS = {"amazon", "aliexpress"}
+VALID_PLATFORMS = {"amazon", "aliexpress", "temu", "shein"}
 
 
 class PurchaseService:
@@ -119,6 +119,27 @@ class PurchaseService:
     def increment_click(self, purchase_id: str) -> None:
         """Record that someone clicked through to this product."""
         self._purchase_repo.increment_click(purchase_id)
+
+    def claim_gift(self, purchase_id: str, gifter_user_id: str) -> Purchase:
+        """Mark a purchase as being gifted by gifter_user_id. The owner should not be the gifter."""
+        purchase = self._purchase_repo.find_by_id(purchase_id)
+        if not purchase:
+            raise ValueError("Purchase not found.")
+        if purchase.user_id == gifter_user_id:
+            raise ValueError("You cannot gift your own item.")
+        if purchase.gifted_by:
+            raise ValueError("This item is already claimed for gifting.")
+        purchase.gifted_by = gifter_user_id
+        return self._purchase_repo.save(purchase)
+
+    def unclaim_gift(self, purchase_id: str, user_id: str) -> Purchase:
+        purchase = self._purchase_repo.find_by_id(purchase_id)
+        if not purchase:
+            raise ValueError("Purchase not found.")
+        if purchase.gifted_by != user_id:
+            raise ValueError("You did not claim this gift.")
+        purchase.gifted_by = None
+        return self._purchase_repo.save(purchase)
 
     def delete_purchase(self, purchase_id: str, user_id: str) -> None:
         """

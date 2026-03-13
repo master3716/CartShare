@@ -194,6 +194,74 @@ const PLATFORM_EXTRACTORS = [
       };
     },
   },
+
+  // ----------------------------------------------------------------
+  // SHEIN extractor
+  // ----------------------------------------------------------------
+  {
+    platform: EXTENSION_CONSTANTS.PLATFORM_SHEIN,
+    matches(url) {
+      return /shein\.com/.test(url);
+    },
+    extract() {
+      const metaTitle = document.querySelector('meta[property="og:title"]');
+      const metaImage = document.querySelector('meta[property="og:image"]');
+      const metaPrice = document.querySelector('meta[property="product:price:amount"]');
+      const metaCurrency = document.querySelector('meta[property="product:price:currency"]');
+
+      const itemName = (metaTitle && metaTitle.content)
+        ? metaTitle.content.trim()
+        : getText(['.product-intro__head-name', 'h1.product-name', 'h1']);
+
+      const price = (metaPrice && metaPrice.content)
+        ? metaPrice.content.trim()
+        : getText(['.product-intro__head-price .from', '.original-price', '.price-wrapper']);
+
+      const currency = (metaCurrency && metaCurrency.content)
+        ? metaCurrency.content.trim()
+        : (() => { const m = price.match(/^([^0-9]+)/); return m ? m[1].trim() : ""; })();
+
+      const imageUrl = (metaImage && metaImage.content)
+        ? metaImage.content.trim()
+        : getImageSrc(['.product-intro__main-imgbox img', '.crop-image-container img']);
+
+      return { item_name: itemName, price, currency, image_url: imageUrl, product_url: window.location.href, platform: this.platform };
+    },
+  },
+
+  // ----------------------------------------------------------------
+  // Temu extractor
+  // ----------------------------------------------------------------
+  {
+    platform: EXTENSION_CONSTANTS.PLATFORM_TEMU,
+    matches(url) {
+      return /temu\.com/.test(url);
+    },
+    extract() {
+      const metaTitle = document.querySelector('meta[property="og:title"]');
+      const metaImage = document.querySelector('meta[property="og:image"]');
+      const metaPrice = document.querySelector('meta[property="product:price:amount"]');
+      const metaCurrency = document.querySelector('meta[property="product:price:currency"]');
+
+      const itemName = (metaTitle && metaTitle.content)
+        ? metaTitle.content.trim()
+        : getText(['h1.title', 'h1[class*="title"]', 'h1']);
+
+      const price = (metaPrice && metaPrice.content)
+        ? metaPrice.content.trim()
+        : getText(['[class*="price-current"]', '[class*="sale-price"]', '[class*="final-price"]']);
+
+      const currency = (metaCurrency && metaCurrency.content)
+        ? metaCurrency.content.trim()
+        : (() => { const m = price.match(/^([^0-9]+)/); return m ? m[1].trim() : ""; })();
+
+      const imageUrl = (metaImage && metaImage.content)
+        ? metaImage.content.trim()
+        : getImageSrc(['[class*="main-image"] img', '[class*="gallery"] img']);
+
+      return { item_name: itemName, price, currency, image_url: imageUrl, product_url: window.location.href, platform: this.platform };
+    },
+  },
 ];
 
 // ------------------------------------------------------------------

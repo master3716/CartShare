@@ -121,6 +121,33 @@ def create_purchase_blueprint(
         return jsonify({"message": "ok"}), 200
 
     # ------------------------------------------------------------------
+    # POST /api/purchases/<id>/gift  – claim an item as a gift
+    # ------------------------------------------------------------------
+
+    @bp.route("/<purchase_id>/gift", methods=["POST"])
+    @auth
+    def gift_purchase(purchase_id):
+        """A friend claims they will gift this item to the owner."""
+        try:
+            purchase = purchase_service.claim_gift(purchase_id, g.current_user.id)
+            return jsonify(purchase.to_dict()), 200
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 400
+
+    # ------------------------------------------------------------------
+    # DELETE /api/purchases/<id>/gift  – unclaim gift
+    # ------------------------------------------------------------------
+
+    @bp.route("/<purchase_id>/gift", methods=["DELETE"])
+    @auth
+    def ungift_purchase(purchase_id):
+        try:
+            purchase = purchase_service.unclaim_gift(purchase_id, g.current_user.id)
+            return jsonify(purchase.to_dict()), 200
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 400
+
+    # ------------------------------------------------------------------
     # GET /api/purchases/user/<username>  – public profile purchases
     # ------------------------------------------------------------------
 

@@ -36,4 +36,6 @@ const EXTENSION_CONSTANTS = {
   // Supported shopping platforms.  Matches the values the server accepts.
   PLATFORM_AMAZON: "amazon",
   PLATFORM_ALIEXPRESS: "aliexpress",
+  PLATFORM_TEMU: "temu",
+  PLATFORM_SHEIN: "shein",
 };

@@ -82,6 +82,20 @@ const CHECKOUT_DETECTORS = [
       return /aliexpress\.(com|us)/.test(url);
     },
   },
+
+  {
+    platform: EXTENSION_CONSTANTS.PLATFORM_SHEIN,
+    isCheckoutPage(url) { return /shein\.com\/checkout/.test(url); },
+    isConfirmationPage(url) { return /shein\.com\/order\/success/.test(url) || /shein\.com\/user\/orders/.test(url); },
+    matches(url) { return /shein\.com/.test(url); },
+  },
+
+  {
+    platform: EXTENSION_CONSTANTS.PLATFORM_TEMU,
+    isCheckoutPage(url) { return /temu\.com\/checkout/.test(url); },
+    isConfirmationPage(url) { return /temu\.com\/order-success/.test(url) || /temu\.com\/bgn\/order/.test(url); },
+    matches(url) { return /temu\.com/.test(url); },
+  },
 ];
 
 // ------------------------------------------------------------------

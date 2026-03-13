@@ -45,6 +45,7 @@ class Purchase:
     image_url: str = ""
     notes: str = ""
     click_count: int = 0
+    gifted_by: Optional[str] = None
     added_at: str = field(
         default_factory=lambda: datetime.now(timezone.utc).isoformat()
     )
@@ -67,6 +68,7 @@ class Purchase:
             "image_url": self.image_url,
             "notes": self.notes,
             "click_count": self.click_count,
+            "gifted_by": self.gifted_by,
             "added_at": self.added_at,
         }
 
@@ -76,6 +78,6 @@ class Purchase:
         known = {
             "id", "user_id", "item_name", "product_url", "platform",
             "is_public", "price", "currency", "image_url", "notes",
-            "click_count", "added_at",
+            "click_count", "gifted_by", "added_at",
         }
         return Purchase(**{k: v for k, v in data.items() if k in known})
