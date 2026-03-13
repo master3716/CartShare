@@ -4,27 +4,6 @@
 
 Auth.requireLogin();
 
-// ------------------------------------------------------------------
-// Toast notifications
-// ------------------------------------------------------------------
-function showToast(message, type = "error") {
-  let container = document.querySelector(".toast-container");
-  if (!container) {
-    container = document.createElement("div");
-    container.className = "toast-container";
-    document.body.appendChild(container);
-  }
-  const toast = document.createElement("div");
-  toast.className = `toast ${type}`;
-  toast.textContent = message;
-  container.appendChild(toast);
-  requestAnimationFrame(() => toast.classList.add("show"));
-  setTimeout(() => {
-    toast.classList.remove("show");
-    setTimeout(() => toast.remove(), 200);
-  }, 3500);
-}
-
 const user = Auth.currentUser();
 if (user) {
   Auth.setupNavbar(user);
@@ -69,11 +48,70 @@ async function loadComments(purchaseId, container, currentUserId) {
   const comments = result.data || [];
   const list = container.querySelector(".comment-list");
   list.innerHTML = comments.map(c => buildCommentHtml(c, currentUserId)).join("");
+  attachDeleteCommentHandlers(list, purchaseId, container, currentUserId);
+}
+
+function attachDeleteCommentHandlers(list, purchaseId, container, currentUserId) {
   list.querySelectorAll(".btn-delete-comment").forEach(btn => {
     btn.addEventListener("click", async () => {
-      await Api.deleteComment(btn.dataset.id);
-      await loadComments(purchaseId, container, currentUserId);
+      const commentEl = btn.closest(".comment");
+      commentEl.remove(); // optimistic
+      const result = await Api.deleteComment(btn.dataset.id);
+      if (!result.ok) {
+        await loadComments(purchaseId, container, currentUserId); // revert
+        showToast("Something went wrong, the comment wasn't deleted.");
+      }
     });
+  });
+}
+
+// Shared optimistic Me too handler — used by buildCard and pollStats re-attachment
+function attachAlsoBuyingHandler(section, id, toggleListFn) {
+  const btn = section.querySelector(".btn-also-buying");
+  if (!btn) return;
+  btn.addEventListener("click", async function handler() {
+    const isActive = btn.dataset.buying === "true";
+    const nowActive = !isActive;
+
+    // Read current friend users from DOM (already excludes self)
+    const friendUsers = Array.from(section.querySelectorAll(".also-buying-user")).map(el => {
+      const imgEl = el.querySelector("img.also-buying-avatar");
+      const username = el.textContent.trim().replace(/^@/, "").trim();
+      return { username, avatar_url: imgEl ? imgEl.src : "" };
+    });
+    const friendCount = friendUsers.length;
+    const optimisticBadgeHtml = friendCount > 0
+      ? `<span class="badge badge-also-buying badge-also-buying-clickable" data-id="${id}">🛒 ${friendCount} ${friendCount === 1 ? "friend is" : "friends are"} also buying this ▾</span>
+         <div class="also-buying-list hidden" id="also-list-${id}">${friendUsers.map(u => `
+           <span class="also-buying-user">
+             ${u.avatar_url ? `<img src="${u.avatar_url}" class="also-buying-avatar" />` : `<span class="also-buying-initial">${u.username[0].toUpperCase()}</span>`}
+             @${escapeHtml(u.username)}
+           </span>`).join("")}</div>`
+      : "";
+
+    section.innerHTML = `
+      ${optimisticBadgeHtml}
+      <button class="btn btn-sm btn-ghost btn-also-buying" data-id="${id}" data-buying="${nowActive}">
+        ${nowActive ? "✓ Me too — Undo" : "🛒 Me too!"}
+      </button>
+    `;
+    const newBadge = section.querySelector(".badge-also-buying-clickable");
+    if (newBadge && toggleListFn) newBadge.addEventListener("click", toggleListFn);
+
+    const result = isActive ? await Api.unmarkAlsoBuying(id) : await Api.markAlsoBuying(id);
+
+    if (result.ok) {
+      attachAlsoBuyingHandler(section, id, toggleListFn);
+    } else {
+      // Revert + toast
+      const newBtn = section.querySelector(".btn-also-buying");
+      if (newBtn) {
+        newBtn.dataset.buying = isActive.toString();
+        newBtn.textContent = isActive ? "✓ Me too — Undo" : "🛒 Me too!";
+      }
+      attachAlsoBuyingHandler(section, id, toggleListFn);
+      showToast("Something went wrong, your action wasn't saved.");
+    }
   });
 }
 
@@ -190,72 +228,18 @@ function buildCard(item) {
     Api.clickPurchase(id); // fire and forget
   });
 
-  // "Me too / also buying" toggle handler — optimistic UI
-  const alsoBuyingBtn = card.querySelector(".btn-also-buying");
-  if (alsoBuyingBtn) {
-    alsoBuyingBtn.addEventListener("click", async () => {
-      const isActive = alsoBuyingBtn.dataset.buying === "true";
-      const section = alsoBuyingBtn.closest(".also-buying-section");
-      const id = alsoBuyingBtn.dataset.id;
-
-      // --- Optimistic update: change UI instantly ---
-      const nowActive = !isActive;
-      const prevFriendUsers = Array.from(section.querySelectorAll(".also-buying-user")).map(el => {
-        const imgEl = el.querySelector("img.also-buying-avatar");
-        const username = el.textContent.trim().replace(/^@/, "").trim();
-        return { username, avatar_url: imgEl ? imgEl.src : "", id: "" };
-      });
-      const friendUsers = prevFriendUsers; // already excludes current user
-      const friendCount = friendUsers.length;
-
-      const optimisticBadgeHtml = friendCount > 0
-        ? `<span class="badge badge-also-buying badge-also-buying-clickable" data-id="${id}">🛒 ${friendCount} ${friendCount === 1 ? "friend is" : "friends are"} also buying this ▾</span>
-           <div class="also-buying-list hidden" id="also-list-${id}">${friendUsers.map(u => `
-             <span class="also-buying-user">
-               ${u.avatar_url ? `<img src="${u.avatar_url}" class="also-buying-avatar" />` : `<span class="also-buying-initial">${u.username[0].toUpperCase()}</span>`}
-               @${escapeHtml(u.username)}
-             </span>`).join("")}</div>`
-        : "";
-
-      section.innerHTML = `
-        ${optimisticBadgeHtml}
-        <button class="btn btn-sm btn-ghost btn-also-buying" data-id="${id}" data-buying="${nowActive}">
-          ${nowActive ? "✓ Me too — Undo" : "🛒 Me too!"}
-        </button>
-      `;
-      const newBadge = section.querySelector(".badge-also-buying-clickable");
-      if (newBadge) newBadge.addEventListener("click", toggleAlsoBuyingList);
-
-      // --- Fire request in background ---
-      const result = isActive
-        ? await Api.unmarkAlsoBuying(id)
-        : await Api.markAlsoBuying(id);
-
-      const newBtn = section.querySelector(".btn-also-buying");
-      if (result.ok) {
-        if (newBtn) newBtn.addEventListener("click", arguments.callee);
-      } else {
-        // Revert silently + toast
-        if (newBtn) {
-          newBtn.dataset.buying = isActive.toString();
-          newBtn.textContent = isActive ? "✓ Me too — Undo" : "🛒 Me too!";
-          newBtn.addEventListener("click", arguments.callee);
-        }
-        showToast("Something went wrong, your action wasn't saved.");
-      }
-    });
-  }
-
   // Toggle the "who's buying" dropdown when clicking the badge
   function toggleAlsoBuyingList(e) {
     const purchaseId = e.currentTarget.dataset.id;
-    const list = card.querySelector(`#also-list-${purchaseId}`);
+    const list = document.querySelector(`#also-list-${purchaseId}`);
     if (list) list.classList.toggle("hidden");
   }
 
-  const alsoBuyingBadge = card.querySelector(".badge-also-buying-clickable");
-  if (alsoBuyingBadge) {
-    alsoBuyingBadge.addEventListener("click", toggleAlsoBuyingList);
+  const alsoBuyingSection = card.querySelector(".also-buying-section");
+  if (alsoBuyingSection) {
+    const badge = alsoBuyingSection.querySelector(".badge-also-buying-clickable");
+    if (badge) badge.addEventListener("click", toggleAlsoBuyingList);
+    attachAlsoBuyingHandler(alsoBuyingSection, item.id, toggleAlsoBuyingList);
   }
 
   // Save to collection — inline popover with existing categories + new option
@@ -299,12 +283,12 @@ function buildCard(item) {
       async function saveToCategory(category) {
         if (!category || !category.trim()) return;
         popover.remove();
+        const prevText = saveBtn.textContent;
+        saveBtn.textContent = "📁 Saved!"; // optimistic
         saveBtn.disabled = true;
         const result = await Api.saveItem(saveBtn.dataset.id, category.trim());
-        if (result.ok) {
-          saveBtn.textContent = "📁 Saved!";
-          saveBtn.disabled = true;
-        } else {
+        if (!result.ok) {
+          saveBtn.textContent = prevText; // revert
           saveBtn.disabled = false;
           showToast("Something went wrong, the item wasn't saved.");
         }
@@ -362,8 +346,12 @@ function buildCard(item) {
         realEl.innerHTML = buildCommentHtml(real, currentUserId);
         const realNode = realEl.firstElementChild;
         realNode.querySelector(".btn-delete-comment")?.addEventListener("click", async () => {
-          await Api.deleteComment(real.id);
-          await loadComments(item.id, commentsSection, currentUserId);
+          realNode.remove(); // optimistic
+          const delResult = await Api.deleteComment(real.id);
+          if (!delResult.ok) {
+            await loadComments(item.id, commentsSection, currentUserId); // revert
+            showToast("Something went wrong, the comment wasn't deleted.");
+          }
         });
         tempNode.replaceWith(realNode);
       } else {
@@ -476,28 +464,15 @@ async function pollStats() {
     section.innerHTML = `${badgeHtml}${btnHtml}`;
 
     // Re-attach badge click
+    const toggleList = () => {
+      const list = section.querySelector(`#also-list-${id}`);
+      if (list) list.classList.toggle("hidden");
+    };
     const newBadge = section.querySelector(".badge-also-buying-clickable");
-    if (newBadge) {
-      newBadge.addEventListener("click", (e) => {
-        const list = section.querySelector(`#also-list-${id}`);
-        if (list) list.classList.toggle("hidden");
-      });
-    }
+    if (newBadge) newBadge.addEventListener("click", toggleList);
 
-    // Re-attach Me too button click
-    const newBtn = section.querySelector(".btn-also-buying");
-    if (newBtn) {
-      newBtn.addEventListener("click", async () => {
-        newBtn.disabled = true;
-        const isActive = newBtn.dataset.buying === "true";
-        const r = isActive ? await Api.unmarkAlsoBuying(id) : await Api.markAlsoBuying(id);
-        if (!r.ok) {
-          newBtn.disabled = false;
-          showToast("Something went wrong, your action wasn't saved.");
-        }
-        // pollStats will re-render automatically on next tick
-      });
-    }
+    // Re-attach Me too button click (full optimistic, same as buildCard)
+    attachAlsoBuyingHandler(section, id, toggleList);
   }
 }
 

@@ -211,10 +211,14 @@ async function loadMyCollections() {
       removeBtn.style = "margin-top:6px;font-size:11px;color:#999;";
       removeBtn.textContent = "✕ Remove from collection";
       removeBtn.addEventListener("click", async () => {
-        await Api.deleteSavedItem(saved.id);
-        card.remove();
+        card.remove(); // optimistic
         if (!grid.children.length) section.remove();
         if (!container.children.length) empty.classList.remove("hidden");
+        const result = await Api.deleteSavedItem(saved.id);
+        if (!result.ok) {
+          loadMyCollections(); // revert by reloading
+          showToast("Something went wrong, the item wasn't removed.");
+        }
       });
       card.querySelector(".purchase-card-body").appendChild(removeBtn);
       grid.appendChild(card);
@@ -230,21 +234,33 @@ async function loadMyCollections() {
 // ------------------------------------------------------------------
 
 async function handleToggleVisibility(purchaseId) {
+  const card = document.querySelector(`.purchase-card[data-id="${purchaseId}"]`);
+  const toggleBtn = card?.querySelector(".btn-toggle-visibility");
+  const badgeEl = card?.querySelector(".badge-public, .badge-private");
+
+  // Optimistic: flip badge and button text immediately
+  if (card && toggleBtn && badgeEl) {
+    const isPublic = badgeEl.classList.contains("badge-public");
+    badgeEl.className = isPublic ? "badge badge-private" : "badge badge-public";
+    badgeEl.textContent = isPublic ? "Private" : "Public";
+    toggleBtn.textContent = isPublic ? "🌐 Make Public" : "🔒 Make Private";
+  }
+
   const result = await Api.toggleVisibility(purchaseId);
-  if (result.ok) {
-    await loadMyPurchases();   // re-render to show updated badge
-  } else {
-    alert(result.data?.error || "Failed to update.");
+  if (!result.ok) {
+    await loadMyPurchases(); // revert
+    showToast("Something went wrong, visibility wasn't changed.");
   }
 }
 
 async function handleDelete(purchaseId) {
   if (!confirm("Delete this purchase? This cannot be undone.")) return;
+  const card = document.querySelector(`.purchase-card[data-id="${purchaseId}"]`);
+  card?.remove(); // optimistic
   const result = await Api.deletePurchase(purchaseId);
-  if (result.ok) {
-    await loadMyPurchases();
-  } else {
-    alert(result.data?.error || "Failed to delete.");
+  if (!result.ok) {
+    await loadMyPurchases(); // revert
+    showToast("Something went wrong, the purchase wasn't deleted.");
   }
 }
 
