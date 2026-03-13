@@ -66,10 +66,12 @@ def create_app() -> Flask:
     if MONGO_URI:
         from src.repositories.mongo_user_repository import MongoUserRepository
         from src.repositories.mongo_purchase_repository import MongoPurchaseRepository
+        from src.repositories.mongo_comment_repository import MongoCommentRepository
+        from src.repositories.mongo_saved_item_repository import MongoSavedItemRepository
         user_repo = MongoUserRepository(MONGO_URI)
         purchase_repo = MongoPurchaseRepository(MONGO_URI)
-        comment_repo = CommentRepository(DATABASE_PATH)
-        saved_item_repo = SavedItemRepository(DATABASE_PATH)
+        comment_repo = MongoCommentRepository(MONGO_URI)
+        saved_item_repo = MongoSavedItemRepository(MONGO_URI)
     else:
         user_repo = UserRepository(DATABASE_PATH)
         purchase_repo = PurchaseRepository(DATABASE_PATH)
