@@ -198,12 +198,12 @@ const Api = (() => {
       return request(`/comments/${commentId}`, { method: "DELETE" }, true);
     },
 
-    async giftPurchase(purchaseId) {
-      return request(`/purchases/${purchaseId}/gift`, { method: "POST" }, true);
+    async markAlsoBuying(purchaseId) {
+      return request(`/purchases/${purchaseId}/also-buying`, { method: "POST" }, true);
     },
 
-    async ungiftPurchase(purchaseId) {
-      return request(`/purchases/${purchaseId}/gift`, { method: "DELETE" }, true);
+    async unmarkAlsoBuying(purchaseId) {
+      return request(`/purchases/${purchaseId}/also-buying`, { method: "DELETE" }, true);
     },
 
     async saveItem(purchaseId, category) {

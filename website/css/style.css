@@ -130,7 +130,10 @@ a:hover { text-decoration: underline; }
 .badge-aliexpress { background: #fff3e0; color: #e65100; }
 .badge-temu    { background: #fce4ec; color: #c62828; }
 .badge-shein   { background: #f3e5f5; color: #6a1b9a; }
-.badge-gifted  { background: #e8f5e9; color: #2e7d32; }
+.badge-also-buying { background: #e8f5e9; color: #2e7d32; }
+.also-buying-section { margin-top: 8px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.collection-category { margin-bottom: 24px; }
+.collection-category-title { font-size: 15px; font-weight: 600; color: #5c58a8; margin-bottom: 10px; }
 
 .purchase-card-actions { padding: 0 12px 12px; display: flex; gap: 8px; }
 

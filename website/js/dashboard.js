@@ -167,6 +167,65 @@ async function loadFriendsFeed() {
 }
 
 // ------------------------------------------------------------------
+// Load and render My Collections
+// ------------------------------------------------------------------
+
+async function loadMyCollections() {
+  const container = document.getElementById("collections-container");
+  const spinner = document.getElementById("collections-spinner");
+  const empty = document.getElementById("collections-empty");
+
+  spinner.classList.remove("hidden");
+
+  const result = await Api.getSavedItems();
+  spinner.classList.add("hidden");
+
+  if (!result.ok || !result.data.length) {
+    empty.classList.remove("hidden");
+    return;
+  }
+
+  // Group items by category
+  const byCategory = {};
+  for (const saved of result.data) {
+    if (!byCategory[saved.category]) byCategory[saved.category] = [];
+    byCategory[saved.category].push(saved);
+  }
+
+  for (const [category, items] of Object.entries(byCategory)) {
+    const section = document.createElement("div");
+    section.className = "collection-category";
+    section.innerHTML = `<h3 class="collection-category-title">📁 ${escapeHtml(category)}</h3>`;
+
+    const grid = document.createElement("div");
+    grid.className = "purchase-grid";
+
+    for (const saved of items) {
+      const p = saved.purchase;
+      if (!p) continue;
+      const card = buildPurchaseCard(p, false);
+
+      // Add remove-from-collection button
+      const removeBtn = document.createElement("button");
+      removeBtn.className = "btn btn-ghost btn-sm";
+      removeBtn.style = "margin-top:6px;font-size:11px;color:#999;";
+      removeBtn.textContent = "✕ Remove from collection";
+      removeBtn.addEventListener("click", async () => {
+        await Api.deleteSavedItem(saved.id);
+        card.remove();
+        if (!grid.children.length) section.remove();
+        if (!container.children.length) empty.classList.remove("hidden");
+      });
+      card.querySelector(".purchase-card-body").appendChild(removeBtn);
+      grid.appendChild(card);
+    }
+
+    section.appendChild(grid);
+    container.appendChild(section);
+  }
+}
+
+// ------------------------------------------------------------------
 // Action handlers
 // ------------------------------------------------------------------
 
@@ -203,6 +262,6 @@ async function handleDelete(purchaseId) {
 
   document.getElementById("btn-logout").addEventListener("click", () => Auth.logout());
 
-  // Load both sections in parallel for speed
-  await Promise.all([loadMyPurchases(), loadFriendsFeed()]);
+  // Load all sections in parallel for speed
+  await Promise.all([loadMyPurchases(), loadFriendsFeed(), loadMyCollections()]);
 })();

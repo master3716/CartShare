@@ -121,28 +121,27 @@ def create_purchase_blueprint(
         return jsonify({"message": "ok"}), 200
 
     # ------------------------------------------------------------------
-    # POST /api/purchases/<id>/gift  – claim an item as a gift
+    # POST /api/purchases/<id>/also-buying  – mark "I'm buying this too"
     # ------------------------------------------------------------------
 
-    @bp.route("/<purchase_id>/gift", methods=["POST"])
+    @bp.route("/<purchase_id>/also-buying", methods=["POST"])
     @auth
-    def gift_purchase(purchase_id):
-        """A friend claims they will gift this item to the owner."""
+    def mark_also_buying(purchase_id):
         try:
-            purchase = purchase_service.claim_gift(purchase_id, g.current_user.id)
+            purchase = purchase_service.mark_also_buying(purchase_id, g.current_user.id)
             return jsonify(purchase.to_dict()), 200
         except ValueError as exc:
             return jsonify({"error": str(exc)}), 400
 
     # ------------------------------------------------------------------
-    # DELETE /api/purchases/<id>/gift  – unclaim gift
+    # DELETE /api/purchases/<id>/also-buying  – unmark
     # ------------------------------------------------------------------
 
-    @bp.route("/<purchase_id>/gift", methods=["DELETE"])
+    @bp.route("/<purchase_id>/also-buying", methods=["DELETE"])
     @auth
-    def ungift_purchase(purchase_id):
+    def unmark_also_buying(purchase_id):
         try:
-            purchase = purchase_service.unclaim_gift(purchase_id, g.current_user.id)
+            purchase = purchase_service.unmark_also_buying(purchase_id, g.current_user.id)
             return jsonify(purchase.to_dict()), 200
         except ValueError as exc:
             return jsonify({"error": str(exc)}), 400

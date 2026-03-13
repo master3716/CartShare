@@ -61,26 +61,23 @@ function buildCard(item) {
   const initial = item.friend_username ? item.friend_username[0].toUpperCase() : "?";
   const clicks = item.click_count || 0;
 
-  // Determine gifting state
-  const isGiftedByCurrent = item.gifted_by && item.gifted_by === currentUserId;
-  const isGiftedByOther = item.gifted_by && item.gifted_by !== currentUserId;
+  // "Me too / also buying" state
+  const alsoBuying = item.also_buying || [];
+  const iAmBuying = currentUserId && alsoBuying.includes(currentUserId);
+  const alsoCount = alsoBuying.length;
 
-  let giftHtml = "";
-  if (isGiftedByCurrent) {
-    giftHtml = `
-      <div class="gift-section">
-        <span class="badge badge-gifted">🎁 You're gifting this</span>
-        <button class="btn btn-sm btn-ghost btn-unclaim-gift" data-id="${item.id}">Unclaim</button>
+  let alsoBuyingHtml = "";
+  if (currentUserId) {
+    alsoBuyingHtml = `
+      <div class="also-buying-section">
+        ${alsoCount > 0 ? `<span class="badge badge-also-buying">🛒 ${alsoCount} ${alsoCount === 1 ? "friend is" : "friends are"} also buying this</span>` : ""}
+        <button class="btn btn-sm btn-ghost btn-also-buying" data-id="${item.id}" data-buying="${iAmBuying}">
+          ${iAmBuying ? "✓ Me too — Undo" : "🛒 Me too!"}
+        </button>
       </div>
     `;
-  } else if (isGiftedByOther) {
-    giftHtml = `<div class="gift-section"><span class="badge badge-gifted">🎁 Being gifted</span></div>`;
-  } else if (currentUserId) {
-    giftHtml = `
-      <div class="gift-section">
-        <button class="btn btn-sm btn-ghost btn-gift" data-id="${item.id}">🎁 Gift this</button>
-      </div>
-    `;
+  } else if (alsoCount > 0) {
+    alsoBuyingHtml = `<div class="also-buying-section"><span class="badge badge-also-buying">🛒 ${alsoCount} ${alsoCount === 1 ? "friend is" : "friends are"} also buying this</span></div>`;
   }
 
   card.innerHTML = `
@@ -107,7 +104,7 @@ function buildCard(item) {
       <a class="btn btn-primary shop-btn" data-id="${item.id}" data-url="${item.product_url}" href="#">
         Shop Now →
       </a>
-      ${giftHtml}
+      ${alsoBuyingHtml}
       ${currentUserId ? `<button class="btn btn-sm btn-ghost btn-save-collection" data-id="${item.id}">📁 Save to collection</button>` : ""}
     </div>
 
@@ -138,57 +135,32 @@ function buildCard(item) {
     window.open(url, "_blank");
   });
 
-  // Gift button handler
-  const giftBtn = card.querySelector(".btn-gift");
-  if (giftBtn) {
-    giftBtn.addEventListener("click", async () => {
-      giftBtn.disabled = true;
-      const result = await Api.giftPurchase(giftBtn.dataset.id);
+  // "Me too / also buying" toggle handler
+  const alsoBuyingBtn = card.querySelector(".btn-also-buying");
+  if (alsoBuyingBtn) {
+    alsoBuyingBtn.addEventListener("click", async () => {
+      alsoBuyingBtn.disabled = true;
+      const isActive = alsoBuyingBtn.dataset.buying === "true";
+      const result = isActive
+        ? await Api.unmarkAlsoBuying(alsoBuyingBtn.dataset.id)
+        : await Api.markAlsoBuying(alsoBuyingBtn.dataset.id);
+
       if (result.ok) {
-        const section = giftBtn.closest(".gift-section");
+        const updated = result.data;
+        const buyers = updated.also_buying || [];
+        const count = buyers.length;
+        const nowActive = buyers.includes(currentUserId);
+        const section = alsoBuyingBtn.closest(".also-buying-section");
         section.innerHTML = `
-          <span class="badge badge-gifted">🎁 You're gifting this</span>
-          <button class="btn btn-sm btn-ghost btn-unclaim-gift" data-id="${giftBtn.dataset.id}">Unclaim</button>
+          ${count > 0 ? `<span class="badge badge-also-buying">🛒 ${count} ${count === 1 ? "friend is" : "friends are"} also buying this</span>` : ""}
+          <button class="btn btn-sm btn-ghost btn-also-buying" data-id="${updated.id}" data-buying="${nowActive}">
+            ${nowActive ? "✓ Me too — Undo" : "🛒 Me too!"}
+          </button>
         `;
-        section.querySelector(".btn-unclaim-gift").addEventListener("click", handleUnclaimGift);
+        section.querySelector(".btn-also-buying").addEventListener("click", arguments.callee);
       } else {
-        giftBtn.disabled = false;
-        alert(result.data && result.data.error ? result.data.error : "Could not claim gift.");
-      }
-    });
-  }
-
-  // Unclaim gift button handler
-  const unclaimBtn = card.querySelector(".btn-unclaim-gift");
-  if (unclaimBtn) {
-    unclaimBtn.addEventListener("click", handleUnclaimGift);
-  }
-
-  function handleUnclaimGift(e) {
-    const btn = e.currentTarget;
-    btn.disabled = true;
-    Api.ungiftPurchase(btn.dataset.id).then(result => {
-      if (result.ok) {
-        const section = btn.closest(".gift-section");
-        section.innerHTML = `<button class="btn btn-sm btn-ghost btn-gift" data-id="${btn.dataset.id}">🎁 Gift this</button>`;
-        section.querySelector(".btn-gift").addEventListener("click", async () => {
-          const gb = section.querySelector(".btn-gift");
-          gb.disabled = true;
-          const r = await Api.giftPurchase(gb.dataset.id);
-          if (r.ok) {
-            section.innerHTML = `
-              <span class="badge badge-gifted">🎁 You're gifting this</span>
-              <button class="btn btn-sm btn-ghost btn-unclaim-gift" data-id="${gb.dataset.id}">Unclaim</button>
-            `;
-            section.querySelector(".btn-unclaim-gift").addEventListener("click", handleUnclaimGift);
-          } else {
-            gb.disabled = false;
-            alert(r.data && r.data.error ? r.data.error : "Could not claim gift.");
-          }
-        });
-      } else {
-        btn.disabled = false;
-        alert(result.data && result.data.error ? result.data.error : "Could not unclaim gift.");
+        alsoBuyingBtn.disabled = false;
+        alert(result.data && result.data.error ? result.data.error : "Could not update.");
       }
     });
   }

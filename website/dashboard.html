@@ -58,7 +58,30 @@
     </section>
 
     <!-- ============================================================
-         SECTION 2: My Purchases
+         SECTION 2: My Collections
+    ============================================================ -->
+    <section class="card">
+      <div class="section-header">
+        <h2 class="section-title">My Collections</h2>
+      </div>
+      <p style="color:#666;font-size:13px;margin-bottom:16px;">
+        Items you saved from friends into your personal categories.
+      </p>
+
+      <div id="collections-spinner" class="spinner-wrap">
+        <span class="spinner-sm"></span> Loading…
+      </div>
+
+      <div id="collections-empty" class="empty-state hidden">
+        <div class="icon">📁</div>
+        <p>No saved items yet.<br />Click "📁 Save to collection" on a friend's item in the Feed.</p>
+      </div>
+
+      <div id="collections-container"></div>
+    </section>
+
+    <!-- ============================================================
+         SECTION 3: My Purchases
     ============================================================ -->
     <section class="card">
       <div class="section-header">

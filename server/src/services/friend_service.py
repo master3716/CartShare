@@ -167,11 +167,6 @@ class FriendService:
                 friend.id
             )
             for purchase in public_purchases:
-                # If this item is being gifted TO the requesting user, hide it
-                # from their feed so there are no spoilers.
-                if purchase.gifted_by and purchase.user_id == user_id:
-                    continue
-
                 entry = purchase.to_dict()
                 entry["friend_username"] = friend.username
                 feed.append(entry)
