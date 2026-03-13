@@ -4,6 +4,27 @@
 
 Auth.requireLogin();
 
+// ------------------------------------------------------------------
+// Toast notifications
+// ------------------------------------------------------------------
+function showToast(message, type = "error") {
+  let container = document.querySelector(".toast-container");
+  if (!container) {
+    container = document.createElement("div");
+    container.className = "toast-container";
+    document.body.appendChild(container);
+  }
+  const toast = document.createElement("div");
+  toast.className = `toast ${type}`;
+  toast.textContent = message;
+  container.appendChild(toast);
+  requestAnimationFrame(() => toast.classList.add("show"));
+  setTimeout(() => {
+    toast.classList.remove("show");
+    setTimeout(() => toast.remove(), 200);
+  }, 3500);
+}
+
 const user = Auth.currentUser();
 if (user) {
   Auth.setupNavbar(user);
@@ -198,7 +219,7 @@ function buildCard(item) {
 
       section.innerHTML = `
         ${optimisticBadgeHtml}
-        <button class="btn btn-sm btn-ghost btn-also-buying" data-id="${id}" data-buying="${nowActive}" disabled>
+        <button class="btn btn-sm btn-ghost btn-also-buying" data-id="${id}" data-buying="${nowActive}">
           ${nowActive ? "✓ Me too — Undo" : "🛒 Me too!"}
         </button>
       `;
@@ -212,18 +233,15 @@ function buildCard(item) {
 
       const newBtn = section.querySelector(".btn-also-buying");
       if (result.ok) {
-        // Enable the button, pollStats will sync accurate data on next tick
-        if (newBtn) newBtn.disabled = false;
         if (newBtn) newBtn.addEventListener("click", arguments.callee);
       } else {
-        // Revert on failure
+        // Revert silently + toast
         if (newBtn) {
           newBtn.dataset.buying = isActive.toString();
           newBtn.textContent = isActive ? "✓ Me too — Undo" : "🛒 Me too!";
-          newBtn.disabled = false;
           newBtn.addEventListener("click", arguments.callee);
         }
-        alert(result.data?.error || "Could not update.");
+        showToast("Something went wrong, your action wasn't saved.");
       }
     });
   }
@@ -288,7 +306,7 @@ function buildCard(item) {
           saveBtn.disabled = true;
         } else {
           saveBtn.disabled = false;
-          alert(result.data?.error || "Could not save item.");
+          showToast("Something went wrong, the item wasn't saved.");
         }
       }
 
@@ -324,24 +342,20 @@ function buildCard(item) {
       const text = input.value.trim();
       if (!text) return;
 
-      // Optimistic: append comment instantly
+      // Optimistic: append comment instantly, looks fully real
       const list = commentsSection.querySelector(".comment-list");
       const tempComment = { id: "temp-" + Date.now(), user_id: currentUserId, username: currentUser.username, avatar_url: currentUser.avatar_url || "", text };
       const tempEl = document.createElement("div");
       tempEl.innerHTML = buildCommentHtml(tempComment, currentUserId);
       const tempNode = tempEl.firstElementChild;
-      tempNode.querySelector(".btn-delete-comment")?.remove();
-      tempNode.style.opacity = "0.6";
+      tempNode.querySelector(".btn-delete-comment")?.remove(); // no delete until confirmed
       list.appendChild(tempNode);
-
       input.value = "";
-      submitBtn.disabled = true;
+
       const result = await Api.addComment(item.id, text);
-      submitBtn.disabled = false;
 
       if (result.ok) {
-        // Replace optimistic with confirmed comment
-        tempNode.remove();
+        // Swap optimistic node with confirmed one (has real id + delete button)
         const real = result.data;
         real.avatar_url = currentUser.avatar_url || "";
         const realEl = document.createElement("div");
@@ -351,12 +365,12 @@ function buildCard(item) {
           await Api.deleteComment(real.id);
           await loadComments(item.id, commentsSection, currentUserId);
         });
-        list.appendChild(realNode);
+        tempNode.replaceWith(realNode);
       } else {
-        // Revert on failure
+        // Revert silently + toast
         tempNode.remove();
         input.value = text;
-        alert(result.data?.error || "Could not post comment.");
+        showToast("Something went wrong, your comment wasn't posted.");
       }
     });
     input.addEventListener("keydown", (e) => {
@@ -479,7 +493,7 @@ async function pollStats() {
         const r = isActive ? await Api.unmarkAlsoBuying(id) : await Api.markAlsoBuying(id);
         if (!r.ok) {
           newBtn.disabled = false;
-          alert(r.data?.error || "Could not update.");
+          showToast("Something went wrong, your action wasn't saved.");
         }
         // pollStats will re-render automatically on next tick
       });
