@@ -227,5 +227,9 @@ const Api = (() => {
         body: JSON.stringify({ avatar_url: avatarUrl }),
       }, true);
     },
+
+    async getPurchaseStats(ids) {
+      return request(`/purchases/stats?ids=${ids.join(",")}`);
+    },
   };
 })();

@@ -78,6 +78,9 @@ class PurchaseService:
     # Read
     # ------------------------------------------------------------------
 
+    def get_purchase_by_id(self, purchase_id: str):
+        return self._purchase_repo.find_by_id(purchase_id)
+
     def get_my_purchases(self, user_id: str) -> list[Purchase]:
         """Return ALL purchases (public + private) for the authenticated user."""
         return self._purchase_repo.find_by_user_id(user_id)

@@ -10,7 +10,14 @@ def create_comment_blueprint(comment_service: CommentService, user_repo) -> Blue
     @bp.route("/purchases/<purchase_id>/comments", methods=["GET"])
     def get_comments(purchase_id):
         comments = comment_service.get_comments(purchase_id)
-        return jsonify([c.to_dict() for c in comments]), 200
+        result = []
+        for c in comments:
+            d = c.to_dict()
+            # Always resolve avatar from current user record so pfp changes are retroactive
+            user = user_repo.find_by_id(c.user_id)
+            d["avatar_url"] = user.avatar_url if user else ""
+            result.append(d)
+        return jsonify(result), 200
 
     @bp.route("/purchases/<purchase_id>/comments", methods=["POST"])
     @auth

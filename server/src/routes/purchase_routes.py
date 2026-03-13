@@ -111,6 +111,27 @@ def create_purchase_blueprint(
             return jsonify({"error": str(exc)}), 400
 
     # ------------------------------------------------------------------
+    # GET /api/purchases/stats?ids=id1,id2,...  – lightweight polling
+    # ------------------------------------------------------------------
+
+    @bp.route("/stats", methods=["GET"])
+    def get_stats():
+        """Return click_count, also_buying_count, comment_count for a list of purchase IDs."""
+        ids_param = request.args.get("ids", "")
+        if not ids_param:
+            return jsonify({}), 200
+        purchase_ids = [i.strip() for i in ids_param.split(",") if i.strip()][:50]
+        result = {}
+        for pid in purchase_ids:
+            purchase = purchase_service.get_purchase_by_id(pid)
+            if purchase:
+                result[pid] = {
+                    "click_count": purchase.click_count,
+                    "also_buying_count": len(purchase.also_buying),
+                }
+        return jsonify(result), 200
+
+    # ------------------------------------------------------------------
     # POST /api/purchases/<id>/click  – record a click-through
     # ------------------------------------------------------------------
 

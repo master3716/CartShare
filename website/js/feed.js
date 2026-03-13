@@ -323,6 +323,9 @@ function buildCard(item) {
   return card;
 }
 
+// Track rendered purchase IDs for polling
+const renderedPurchaseIds = [];
+
 async function loadFeed() {
   const result = await Api.getFriendsFeed();
 
@@ -340,7 +343,63 @@ async function loadFeed() {
   }
 
   const container = document.getElementById("feed-container");
-  items.forEach((item) => container.appendChild(buildCard(item)));
+  items.forEach((item) => {
+    container.appendChild(buildCard(item));
+    renderedPurchaseIds.push(item.id);
+  });
+
+  startPolling();
+}
+
+// ------------------------------------------------------------------
+// Real-time polling
+// ------------------------------------------------------------------
+
+function startPolling() {
+  // Poll stats (clicks + me too counts) every 15 seconds
+  setInterval(pollStats, 15000);
+  // Poll comments every 20 seconds
+  setInterval(pollComments, 20000);
+}
+
+async function pollStats() {
+  if (!renderedPurchaseIds.length) return;
+  const result = await Api.getPurchaseStats(renderedPurchaseIds);
+  if (!result.ok) return;
+
+  const stats = result.data;
+  for (const [id, s] of Object.entries(stats)) {
+    // Update click count
+    const clickEl = document.querySelector(`#clicks-${id} .click-num`);
+    if (clickEl) {
+      const count = s.click_count;
+      clickEl.textContent = count;
+      const label = document.querySelector(`#clicks-${id}`);
+      if (label) label.innerHTML = `👆 <span class="click-num">${count}</span> ${count === 1 ? "person" : "people"} clicked this`;
+    }
+
+    // Update me too count on badge (only if not currently open/interacting)
+    const badge = document.querySelector(`.badge-also-buying-clickable[data-id="${id}"]`);
+    if (badge) {
+      const count = s.also_buying_count;
+      const label = `🛒 ${count} ${count === 1 ? "friend is" : "friends are"} also buying this ▾`;
+      if (badge.textContent.trim() !== label.trim()) {
+        badge.textContent = label;
+      }
+    }
+  }
+}
+
+async function pollComments() {
+  const currentUser = Auth.currentUser();
+  const currentUserId = currentUser ? currentUser.id : null;
+
+  for (const id of renderedPurchaseIds) {
+    const commentsSection = document.querySelector(`.comments-section[data-purchase-id="${id}"]`);
+    if (commentsSection) {
+      await loadComments(id, commentsSection, currentUserId);
+    }
+  }
 }
 
 loadFeed();
