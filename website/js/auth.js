@@ -45,5 +45,72 @@ const Auth = (() => {
       await Api.logout();
       window.location.href = "index.html";
     },
+
+    /** Set up navbar with username and clickable avatar. */
+    setupNavbar(user) {
+      // Set username text
+      const usernameEl = document.getElementById("nav-username");
+      if (usernameEl) usernameEl.textContent = `@${user.username}`;
+
+      // Insert avatar before username
+      const navLinks = document.querySelector(".nav-links");
+      if (!navLinks || document.getElementById("nav-avatar-btn")) return;
+
+      const avatarBtn = document.createElement("div");
+      avatarBtn.id = "nav-avatar-btn";
+      avatarBtn.title = "Change profile picture";
+      avatarBtn.style.cssText = "width:32px;height:32px;border-radius:50%;cursor:pointer;overflow:hidden;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#fff;background:#7c78d8;flex-shrink:0;border:2px solid rgba(255,255,255,0.4);";
+
+      if (user.avatar_url) {
+        avatarBtn.innerHTML = `<img src="${user.avatar_url}" style="width:100%;height:100%;object-fit:cover;" />`;
+      } else {
+        avatarBtn.textContent = (user.username || "?")[0].toUpperCase();
+      }
+
+      const fileInput = document.createElement("input");
+      fileInput.type = "file";
+      fileInput.accept = "image/*";
+      fileInput.style.display = "none";
+      document.body.appendChild(fileInput);
+
+      avatarBtn.addEventListener("click", () => fileInput.click());
+
+      fileInput.addEventListener("change", async () => {
+        const file = fileInput.files[0];
+        if (!file) return;
+        // Resize to 150x150 using canvas
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          const img = new Image();
+          img.onload = async () => {
+            const canvas = document.createElement("canvas");
+            canvas.width = 150;
+            canvas.height = 150;
+            const ctx = canvas.getContext("2d");
+            // Cover crop
+            const scale = Math.max(150 / img.width, 150 / img.height);
+            const w = img.width * scale;
+            const h = img.height * scale;
+            ctx.drawImage(img, (150 - w) / 2, (150 - h) / 2, w, h);
+            const dataUrl = canvas.toDataURL("image/jpeg", 0.8);
+            const result = await Api.updateAvatar(dataUrl);
+            if (result.ok) {
+              // Update cached user
+              const cached = Api.getSavedUser();
+              if (cached) {
+                cached.avatar_url = dataUrl;
+                localStorage.setItem("wishlist_user", JSON.stringify(cached));
+              }
+              avatarBtn.innerHTML = `<img src="${dataUrl}" style="width:100%;height:100%;object-fit:cover;" />`;
+            }
+          };
+          img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+        fileInput.value = "";
+      });
+
+      navLinks.insertBefore(avatarBtn, usernameEl);
+    },
   };
 })();

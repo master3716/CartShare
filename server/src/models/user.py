@@ -44,6 +44,7 @@ class User:
     created_at: str = field(
         default_factory=lambda: datetime.now(timezone.utc).isoformat()
     )
+    avatar_url: str = ""
 
     # ------------------------------------------------------------------
     # Serialisation helpers
@@ -64,6 +65,7 @@ class User:
             "friend_requests_received": self.friend_requests_received,
             "friend_requests_sent": self.friend_requests_sent,
             "created_at": self.created_at,
+            "avatar_url": self.avatar_url,
         }
 
     def to_public_dict(self) -> dict:
@@ -75,6 +77,7 @@ class User:
             "id": self.id,
             "username": self.username,
             "created_at": self.created_at,
+            "avatar_url": self.avatar_url,
         }
 
     @staticmethod

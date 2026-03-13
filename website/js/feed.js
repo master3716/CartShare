@@ -6,7 +6,7 @@ Auth.requireLogin();
 
 const user = Auth.currentUser();
 if (user) {
-  document.getElementById("nav-username").textContent = `@${user.username}`;
+  Auth.setupNavbar(user);
 }
 
 document.getElementById("btn-logout").addEventListener("click", async () => {
@@ -29,8 +29,12 @@ function escapeHtml(str) {
 
 function buildCommentHtml(comment, currentUserId) {
   const isOwner = comment.user_id === currentUserId;
+  const avatarHtml = comment.avatar_url
+    ? `<img src="${comment.avatar_url}" class="comment-avatar" />`
+    : `<span class="comment-avatar comment-avatar-initial">${(comment.username || "?")[0].toUpperCase()}</span>`;
   return `
     <div class="comment" data-comment-id="${comment.id}">
+      ${avatarHtml}
       <span class="comment-author">@${comment.username}</span>
       <span class="comment-text">${escapeHtml(comment.text)}</span>
       ${isOwner ? `<button class="btn-delete-comment" data-id="${comment.id}">✕</button>` : ""}
@@ -63,13 +67,18 @@ function buildCard(item) {
 
   // "Me too / also buying" state
   const alsoBuying = item.also_buying || [];
-  const alsoBuyingUsernames = item.also_buying_usernames || [];
+  const alsoBuyingUsers = item.also_buying_users || [];
   const iAmBuying = currentUserId && alsoBuying.includes(currentUserId);
   const alsoCount = alsoBuying.length;
 
   const badgeHtml = alsoCount > 0
     ? `<span class="badge badge-also-buying badge-also-buying-clickable" data-id="${item.id}">🛒 ${alsoCount} ${alsoCount === 1 ? "friend is" : "friends are"} also buying this ▾</span>
-       <div class="also-buying-list hidden" id="also-list-${item.id}">${alsoBuyingUsernames.map(u => `<span class="also-buying-user">@${escapeHtml(u)}</span>`).join("")}</div>`
+       <div class="also-buying-list hidden" id="also-list-${item.id}">${alsoBuyingUsers.map(u => `
+         <span class="also-buying-user">
+           ${u.avatar_url ? `<img src="${u.avatar_url}" class="also-buying-avatar" />` : `<span class="also-buying-initial">${u.username[0].toUpperCase()}</span>`}
+           @${escapeHtml(u.username)}
+         </span>
+       `).join("")}</div>`
     : "";
 
   let alsoBuyingHtml = "";
@@ -90,9 +99,13 @@ function buildCard(item) {
     `;
   }
 
+  const avatarHtml = item.friend_avatar_url
+    ? `<img src="${item.friend_avatar_url}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;" />`
+    : `<div class="social-avatar">${initial}</div>`;
+
   card.innerHTML = `
     <div class="social-card-header">
-      <div class="social-avatar">${initial}</div>
+      ${avatarHtml}
       <div class="social-card-meta">
         <span class="social-username">@${item.friend_username}</span>
         <span class="social-date">${formatDate(item.added_at)}</span>
@@ -160,18 +173,27 @@ function buildCard(item) {
         const buyers = updated.also_buying || [];
         const count = buyers.length;
         const nowActive = buyers.includes(currentUserId);
-        // Re-fetch usernames list: keep existing usernames and add/remove current user
-        const prevUsernames = Array.from(
-          alsoBuyingBtn.closest(".also-buying-section").querySelectorAll(".also-buying-user")
-        ).map(el => el.textContent.replace("@", ""));
-        const updatedUsernames = nowActive
-          ? [...prevUsernames.filter(u => u !== currentUser.username), currentUser.username]
-          : prevUsernames.filter(u => u !== currentUser.username);
-
+        // Re-build also_buying_users list: keep existing users and add/remove current user
         const section = alsoBuyingBtn.closest(".also-buying-section");
+        const prevUsers = Array.from(
+          section.querySelectorAll(".also-buying-user")
+        ).map(el => {
+          const imgEl = el.querySelector("img.also-buying-avatar");
+          const username = el.textContent.trim().replace(/^@/, "");
+          return { username, avatar_url: imgEl ? imgEl.src : "" };
+        });
+        const updatedUsers = nowActive
+          ? [...prevUsers.filter(u => u.username !== currentUser.username), { username: currentUser.username, avatar_url: currentUser.avatar_url || "" }]
+          : prevUsers.filter(u => u.username !== currentUser.username);
+
         const newBadgeHtml = count > 0
           ? `<span class="badge badge-also-buying badge-also-buying-clickable" data-id="${updated.id}">🛒 ${count} ${count === 1 ? "friend is" : "friends are"} also buying this ▾</span>
-             <div class="also-buying-list hidden" id="also-list-${updated.id}">${updatedUsernames.map(u => `<span class="also-buying-user">@${escapeHtml(u)}</span>`).join("")}</div>`
+             <div class="also-buying-list hidden" id="also-list-${updated.id}">${updatedUsers.map(u => `
+               <span class="also-buying-user">
+                 ${u.avatar_url ? `<img src="${u.avatar_url}" class="also-buying-avatar" />` : `<span class="also-buying-initial">${u.username[0].toUpperCase()}</span>`}
+                 @${escapeHtml(u.username)}
+               </span>
+             `).join("")}</div>`
           : "";
         section.innerHTML = `
           ${newBadgeHtml}

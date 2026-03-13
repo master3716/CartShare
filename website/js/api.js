@@ -220,5 +220,12 @@ const Api = (() => {
     async deleteSavedItem(itemId) {
       return request(`/saved-items/${itemId}`, { method: "DELETE" }, true);
     },
+
+    async updateAvatar(avatarUrl) {
+      return request("/users/me/avatar", {
+        method: "PATCH",
+        body: JSON.stringify({ avatar_url: avatarUrl }),
+      }, true);
+    },
   };
 })();

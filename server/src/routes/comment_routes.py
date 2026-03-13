@@ -22,6 +22,7 @@ def create_comment_blueprint(comment_service: CommentService, user_repo) -> Blue
                 user_id=g.current_user.id,
                 username=g.current_user.username,
                 text=data.get("text", ""),
+                avatar_url=g.current_user.avatar_url,
             )
             return jsonify(comment.to_dict()), 201
         except ValueError as exc:

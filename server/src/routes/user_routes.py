@@ -7,7 +7,7 @@ GET /api/users/me          – return the logged-in user's own profile
 GET /api/users/<username>  – return any user's PUBLIC profile (no auth needed)
 """
 
-from flask import Blueprint, jsonify, g
+from flask import Blueprint, jsonify, g, request
 from src.services.user_service import UserService
 from src.middleware.auth_middleware import require_auth
 
@@ -35,6 +35,24 @@ def create_user_blueprint(user_service: UserService, user_repo) -> Blueprint:
         data["friends_count"] = len(user.friends)
         data["pending_requests_count"] = len(user.friend_requests_received)
         return jsonify(data), 200
+
+    # ------------------------------------------------------------------
+    # PATCH /api/users/me/avatar
+    # ------------------------------------------------------------------
+
+    @bp.route("/me/avatar", methods=["PATCH"])
+    @auth
+    def update_avatar():
+        """Update the avatar URL for the currently authenticated user."""
+        data = request.get_json(silent=True) or {}
+        avatar_url = data.get("avatar_url", "")
+        try:
+            user = user_service.update_avatar(g.current_user.id, avatar_url)
+            result = user.to_public_dict()
+            result["avatar_url"] = user.avatar_url
+            return jsonify(result), 200
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 400
 
     # ------------------------------------------------------------------
     # GET /api/users/<username>

@@ -123,3 +123,11 @@ class UserService:
         if not user:
             raise ValueError(f"User '{username}' not found.")
         return user
+
+    def update_avatar(self, user_id: str, avatar_url: str) -> User:
+        """Update the avatar URL for the given user."""
+        user = self._user_repo.find_by_id(user_id)
+        if not user:
+            raise ValueError("User not found.")
+        user.avatar_url = avatar_url
+        return self._user_repo.save(user)

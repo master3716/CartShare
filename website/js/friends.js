@@ -53,7 +53,10 @@ async function loadFriends() {
     item.className = "friend-item";
     item.innerHTML = `
       <div class="friend-info">
-        <div class="friend-avatar">${escapeHtml(getInitial(friend.username))}</div>
+        ${friend.avatar_url
+          ? `<img src="${friend.avatar_url}" class="friend-avatar friend-avatar-img" />`
+          : `<div class="friend-avatar">${escapeHtml(getInitial(friend.username))}</div>`
+        }
         <div>
           <div class="friend-username">@${escapeHtml(friend.username)}</div>
         </div>
@@ -104,7 +107,10 @@ async function loadPendingRequests() {
     item.className = "friend-item";
     item.innerHTML = `
       <div class="friend-info">
-        <div class="friend-avatar">${escapeHtml(getInitial(user.username))}</div>
+        ${user.avatar_url
+          ? `<img src="${user.avatar_url}" class="friend-avatar friend-avatar-img" />`
+          : `<div class="friend-avatar">${escapeHtml(getInitial(user.username))}</div>`
+        }
         <div class="friend-username">@${escapeHtml(user.username)}</div>
       </div>
       <div class="friend-actions">
@@ -193,7 +199,7 @@ function initSendRequestForm() {
   Auth.requireLogin();
 
   const user = Auth.currentUser();
-  if (user) document.getElementById("nav-username").textContent = `@${user.username}`;
+  if (user) Auth.setupNavbar(user);
 
   document.getElementById("btn-logout").addEventListener("click", () => Auth.logout());
 

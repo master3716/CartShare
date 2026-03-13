@@ -525,3 +525,12 @@ a:hover { text-decoration: underline; }
 .comment-input:focus {
   border-color: var(--primary);
 }
+
+/* ------------------------------------------------------------------ */
+/* Avatar styles                                                        */
+/* ------------------------------------------------------------------ */
+.also-buying-avatar { width: 18px; height: 18px; border-radius: 50%; object-fit: cover; vertical-align: middle; margin-right: 3px; }
+.also-buying-initial { display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:#7c78d8;color:#fff;font-size:10px;font-weight:700;margin-right:3px;vertical-align:middle; }
+.comment-avatar { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; vertical-align: middle; margin-right: 5px; flex-shrink: 0; }
+.comment-avatar-initial { display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#7c78d8;color:#fff;font-size:11px;font-weight:700;margin-right:5px;flex-shrink:0; }
+.friend-avatar-img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }

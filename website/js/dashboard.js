@@ -257,7 +257,7 @@ async function handleDelete(purchaseId) {
 
   const user = Auth.currentUser();
   if (user) {
-    document.getElementById("nav-username").textContent = `@${user.username}`;
+    Auth.setupNavbar(user);
   }
 
   document.getElementById("btn-logout").addEventListener("click", () => Auth.logout());
