@@ -154,75 +154,76 @@ function buildCard(item) {
     </div>
   `;
 
-  card.querySelector(".shop-btn").addEventListener("click", async (e) => {
+  card.querySelector(".shop-btn").addEventListener("click", (e) => {
     e.preventDefault();
     const btn = e.currentTarget;
     const id = btn.dataset.id;
     const url = btn.dataset.url;
-    await Api.clickPurchase(id);
-    const countEl = document.querySelector(`#clicks-${id} .click-num`);
-    if (countEl) {
-      const newCount = parseInt(countEl.textContent) + 1;
-      countEl.textContent = newCount;
-      const label = document.querySelector(`#clicks-${id}`);
-      label.innerHTML = `👆 <span class="click-num">${newCount}</span> ${newCount === 1 ? "person" : "people"} clicked this`;
+    // Optimistic: increment count immediately, then fire request
+    const clickLabel = document.querySelector(`#clicks-${id}`);
+    if (clickLabel) {
+      const newCount = parseInt(clickLabel.querySelector(".click-num")?.textContent || "0") + 1;
+      clickLabel.innerHTML = `👆 <span class="click-num">${newCount}</span> ${newCount === 1 ? "person" : "people"} clicked this`;
     }
     window.open(url, "_blank");
+    Api.clickPurchase(id); // fire and forget
   });
 
-  // "Me too / also buying" toggle handler
+  // "Me too / also buying" toggle handler — optimistic UI
   const alsoBuyingBtn = card.querySelector(".btn-also-buying");
   if (alsoBuyingBtn) {
     alsoBuyingBtn.addEventListener("click", async () => {
-      alsoBuyingBtn.disabled = true;
       const isActive = alsoBuyingBtn.dataset.buying === "true";
+      const section = alsoBuyingBtn.closest(".also-buying-section");
+      const id = alsoBuyingBtn.dataset.id;
+
+      // --- Optimistic update: change UI instantly ---
+      const nowActive = !isActive;
+      const prevFriendUsers = Array.from(section.querySelectorAll(".also-buying-user")).map(el => {
+        const imgEl = el.querySelector("img.also-buying-avatar");
+        const username = el.textContent.trim().replace(/^@/, "").trim();
+        return { username, avatar_url: imgEl ? imgEl.src : "", id: "" };
+      });
+      const friendUsers = prevFriendUsers; // already excludes current user
+      const friendCount = friendUsers.length;
+
+      const optimisticBadgeHtml = friendCount > 0
+        ? `<span class="badge badge-also-buying badge-also-buying-clickable" data-id="${id}">🛒 ${friendCount} ${friendCount === 1 ? "friend is" : "friends are"} also buying this ▾</span>
+           <div class="also-buying-list hidden" id="also-list-${id}">${friendUsers.map(u => `
+             <span class="also-buying-user">
+               ${u.avatar_url ? `<img src="${u.avatar_url}" class="also-buying-avatar" />` : `<span class="also-buying-initial">${u.username[0].toUpperCase()}</span>`}
+               @${escapeHtml(u.username)}
+             </span>`).join("")}</div>`
+        : "";
+
+      section.innerHTML = `
+        ${optimisticBadgeHtml}
+        <button class="btn btn-sm btn-ghost btn-also-buying" data-id="${id}" data-buying="${nowActive}" disabled>
+          ${nowActive ? "✓ Me too — Undo" : "🛒 Me too!"}
+        </button>
+      `;
+      const newBadge = section.querySelector(".badge-also-buying-clickable");
+      if (newBadge) newBadge.addEventListener("click", toggleAlsoBuyingList);
+
+      // --- Fire request in background ---
       const result = isActive
-        ? await Api.unmarkAlsoBuying(alsoBuyingBtn.dataset.id)
-        : await Api.markAlsoBuying(alsoBuyingBtn.dataset.id);
+        ? await Api.unmarkAlsoBuying(id)
+        : await Api.markAlsoBuying(id);
 
+      const newBtn = section.querySelector(".btn-also-buying");
       if (result.ok) {
-        const updated = result.data;
-        const buyers = updated.also_buying || [];
-        const count = buyers.length;
-        const nowActive = buyers.includes(currentUserId);
-        // Re-build also_buying_users list: keep existing users and add/remove current user
-        const section = alsoBuyingBtn.closest(".also-buying-section");
-        const prevUsers = Array.from(
-          section.querySelectorAll(".also-buying-user")
-        ).map(el => {
-          const imgEl = el.querySelector("img.also-buying-avatar");
-          const username = el.textContent.trim().replace(/^@/, "");
-          return { username, avatar_url: imgEl ? imgEl.src : "" };
-        });
-        // updatedUsers excludes current user (they see "X friends", not themselves)
-        const updatedUsers = nowActive
-          ? [...prevUsers.filter(u => u.username !== currentUser.username), { username: currentUser.username, avatar_url: currentUser.avatar_url || "" }]
-          : prevUsers.filter(u => u.username !== currentUser.username);
-        const friendUsers = updatedUsers.filter(u => u.username !== currentUser.username);
-        const friendCount = friendUsers.length;
-
-        const newBadgeHtml = friendCount > 0
-          ? `<span class="badge badge-also-buying badge-also-buying-clickable" data-id="${updated.id}">🛒 ${friendCount} ${friendCount === 1 ? "friend is" : "friends are"} also buying this ▾</span>
-             <div class="also-buying-list hidden" id="also-list-${updated.id}">${friendUsers.map(u => `
-               <span class="also-buying-user">
-                 ${u.avatar_url ? `<img src="${u.avatar_url}" class="also-buying-avatar" />` : `<span class="also-buying-initial">${u.username[0].toUpperCase()}</span>`}
-                 @${escapeHtml(u.username)}
-               </span>
-             `).join("")}</div>`
-          : "";
-        section.innerHTML = `
-          ${newBadgeHtml}
-          <button class="btn btn-sm btn-ghost btn-also-buying" data-id="${updated.id}" data-buying="${nowActive}">
-            ${nowActive ? "✓ Me too — Undo" : "🛒 Me too!"}
-          </button>
-        `;
-        const newBtn = section.querySelector(".btn-also-buying");
-        newBtn.addEventListener("click", arguments.callee);
-        const newBadge = section.querySelector(".badge-also-buying-clickable");
-        if (newBadge) newBadge.addEventListener("click", toggleAlsoBuyingList);
+        // Enable the button, pollStats will sync accurate data on next tick
+        if (newBtn) newBtn.disabled = false;
+        if (newBtn) newBtn.addEventListener("click", arguments.callee);
       } else {
-        alsoBuyingBtn.disabled = false;
-        alert(result.data && result.data.error ? result.data.error : "Could not update.");
+        // Revert on failure
+        if (newBtn) {
+          newBtn.dataset.buying = isActive.toString();
+          newBtn.textContent = isActive ? "✓ Me too — Undo" : "🛒 Me too!";
+          newBtn.disabled = false;
+          newBtn.addEventListener("click", arguments.callee);
+        }
+        alert(result.data?.error || "Could not update.");
       }
     });
   }
@@ -322,12 +323,40 @@ function buildCard(item) {
     submitBtn.addEventListener("click", async () => {
       const text = input.value.trim();
       if (!text) return;
+
+      // Optimistic: append comment instantly
+      const list = commentsSection.querySelector(".comment-list");
+      const tempComment = { id: "temp-" + Date.now(), user_id: currentUserId, username: currentUser.username, avatar_url: currentUser.avatar_url || "", text };
+      const tempEl = document.createElement("div");
+      tempEl.innerHTML = buildCommentHtml(tempComment, currentUserId);
+      const tempNode = tempEl.firstElementChild;
+      tempNode.querySelector(".btn-delete-comment")?.remove();
+      tempNode.style.opacity = "0.6";
+      list.appendChild(tempNode);
+
+      input.value = "";
       submitBtn.disabled = true;
       const result = await Api.addComment(item.id, text);
       submitBtn.disabled = false;
+
       if (result.ok) {
-        input.value = "";
-        await loadComments(item.id, commentsSection, currentUserId);
+        // Replace optimistic with confirmed comment
+        tempNode.remove();
+        const real = result.data;
+        real.avatar_url = currentUser.avatar_url || "";
+        const realEl = document.createElement("div");
+        realEl.innerHTML = buildCommentHtml(real, currentUserId);
+        const realNode = realEl.firstElementChild;
+        realNode.querySelector(".btn-delete-comment")?.addEventListener("click", async () => {
+          await Api.deleteComment(real.id);
+          await loadComments(item.id, commentsSection, currentUserId);
+        });
+        list.appendChild(realNode);
+      } else {
+        // Revert on failure
+        tempNode.remove();
+        input.value = text;
+        alert(result.data?.error || "Could not post comment.");
       }
     });
     input.addEventListener("keydown", (e) => {
