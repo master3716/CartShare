@@ -224,21 +224,77 @@ function buildCard(item) {
     alsoBuyingBadge.addEventListener("click", toggleAlsoBuyingList);
   }
 
-  // Save to collection button
+  // Save to collection — inline popover with existing categories + new option
   const saveBtn = card.querySelector(".btn-save-collection");
   if (saveBtn) {
-    saveBtn.addEventListener("click", async () => {
-      const category = prompt("Enter a collection name (e.g. Tech, Gift Ideas):");
-      if (!category || !category.trim()) return;
-      saveBtn.disabled = true;
-      const result = await Api.saveItem(saveBtn.dataset.id, category.trim());
-      saveBtn.disabled = false;
-      if (result.ok) {
-        saveBtn.textContent = "📁 Saved!";
+    saveBtn.addEventListener("click", async (e) => {
+      e.stopPropagation();
+
+      // Remove any existing popover
+      document.querySelectorAll(".collection-popover").forEach(p => p.remove());
+
+      // Fetch existing categories
+      const catResult = await Api.getSavedItems();
+      const existingCats = catResult.ok
+        ? [...new Set((catResult.data || []).map(s => s.category))]
+        : [];
+
+      // Build popover
+      const popover = document.createElement("div");
+      popover.className = "collection-popover";
+
+      const catListHtml = existingCats.map(cat => `
+        <button class="collection-popover-item" data-cat="${escapeHtml(cat)}">📁 ${escapeHtml(cat)}</button>
+      `).join("");
+
+      popover.innerHTML = `
+        ${catListHtml}
+        ${existingCats.length ? `<div class="collection-popover-divider"></div>` : ""}
+        <div class="collection-popover-new">
+          <input class="collection-popover-input" type="text" placeholder="New collection name…" maxlength="50" />
+          <button class="collection-popover-add btn btn-sm btn-primary">Add</button>
+        </div>
+      `;
+
+      saveBtn.parentElement.style.position = "relative";
+      saveBtn.parentElement.appendChild(popover);
+
+      // Focus new input
+      popover.querySelector(".collection-popover-input").focus();
+
+      async function saveToCategory(category) {
+        if (!category || !category.trim()) return;
+        popover.remove();
         saveBtn.disabled = true;
-      } else {
-        alert(result.data && result.data.error ? result.data.error : "Could not save item.");
+        const result = await Api.saveItem(saveBtn.dataset.id, category.trim());
+        if (result.ok) {
+          saveBtn.textContent = "📁 Saved!";
+          saveBtn.disabled = true;
+        } else {
+          saveBtn.disabled = false;
+          alert(result.data?.error || "Could not save item.");
+        }
       }
+
+      // Click existing category
+      popover.querySelectorAll(".collection-popover-item").forEach(btn => {
+        btn.addEventListener("click", () => saveToCategory(btn.dataset.cat));
+      });
+
+      // Add new category
+      const newInput = popover.querySelector(".collection-popover-input");
+      popover.querySelector(".collection-popover-add").addEventListener("click", () => {
+        saveToCategory(newInput.value);
+      });
+      newInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") saveToCategory(newInput.value);
+        if (e.key === "Escape") popover.remove();
+      });
+
+      // Close when clicking outside
+      setTimeout(() => {
+        document.addEventListener("click", () => popover.remove(), { once: true });
+      }, 0);
     });
   }
 

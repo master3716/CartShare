@@ -534,3 +534,40 @@ a:hover { text-decoration: underline; }
 .comment-avatar { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; vertical-align: middle; margin-right: 5px; flex-shrink: 0; }
 .comment-avatar-initial { display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#7c78d8;color:#fff;font-size:11px;font-weight:700;margin-right:5px;flex-shrink:0; }
 .friend-avatar-img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
+
+/* Collection popover */
+.collection-popover {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  z-index: 999;
+  min-width: 200px;
+  padding: 6px 0;
+  display: flex;
+  flex-direction: column;
+}
+.collection-popover-item {
+  background: none;
+  border: none;
+  text-align: left;
+  padding: 8px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  color: #333;
+}
+.collection-popover-item:hover { background: #f5f3ff; }
+.collection-popover-divider { border-top: 1px solid #eee; margin: 4px 0; }
+.collection-popover-new { display: flex; gap: 6px; padding: 8px 10px; }
+.collection-popover-input {
+  flex: 1;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 5px 8px;
+  font-size: 13px;
+  outline: none;
+}
+.collection-popover-input:focus { border-color: var(--primary); }
