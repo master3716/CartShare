@@ -79,6 +79,18 @@ def create_app() -> Flask:
         saved_item_repo = SavedItemRepository(DATABASE_PATH)
 
     # ------------------------------------------------------------------
+    # Step 1.5: migrate plain-text passwords to bcrypt hashes
+    # Runs once on startup; skips users already hashed (starts with "$2b$").
+    # ------------------------------------------------------------------
+    import bcrypt as _bcrypt
+    for _user in user_repo.get_all():
+        if not _user.password.startswith("$2b$"):
+            _user.password = _bcrypt.hashpw(
+                _user.password.encode(), _bcrypt.gensalt()
+            ).decode()
+            user_repo.save(_user)
+
+    # ------------------------------------------------------------------
     # Step 2: instantiate services (business logic layer)
     #         inject the repositories they depend on
     # ------------------------------------------------------------------
