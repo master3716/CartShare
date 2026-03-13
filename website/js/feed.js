@@ -82,10 +82,22 @@ function buildCard(item) {
     : "";
 
   let alsoBuyingHtml = "";
+  // Count excludes the current user (they see "X friends" not counting themselves)
+  const friendCount = iAmBuying ? alsoCount - 1 : alsoCount;
+  const friendBadgeHtml = friendCount > 0
+    ? `<span class="badge badge-also-buying badge-also-buying-clickable" data-id="${item.id}">🛒 ${friendCount} ${friendCount === 1 ? "friend is" : "friends are"} also buying this ▾</span>
+       <div class="also-buying-list hidden" id="also-list-${item.id}">${alsoBuyingUsers.filter(u => u.id !== currentUserId && u.username !== (currentUser && currentUser.username)).map(u => `
+         <span class="also-buying-user">
+           ${u.avatar_url ? `<img src="${u.avatar_url}" class="also-buying-avatar" />` : `<span class="also-buying-initial">${u.username[0].toUpperCase()}</span>`}
+           @${escapeHtml(u.username)}
+         </span>
+       `).join("")}</div>`
+    : "";
+
   if (currentUserId) {
     alsoBuyingHtml = `
-      <div class="also-buying-section">
-        ${badgeHtml}
+      <div class="also-buying-section" data-purchase-id="${item.id}" data-also-count="${alsoCount}">
+        ${friendBadgeHtml}
         <button class="btn btn-sm btn-ghost btn-also-buying" data-id="${item.id}" data-buying="${iAmBuying}">
           ${iAmBuying ? "✓ Me too — Undo" : "🛒 Me too!"}
         </button>
@@ -93,8 +105,8 @@ function buildCard(item) {
     `;
   } else if (alsoCount > 0) {
     alsoBuyingHtml = `
-      <div class="also-buying-section">
-        ${badgeHtml}
+      <div class="also-buying-section" data-purchase-id="${item.id}" data-also-count="${alsoCount}">
+        ${friendBadgeHtml}
       </div>
     `;
   }
@@ -182,13 +194,16 @@ function buildCard(item) {
           const username = el.textContent.trim().replace(/^@/, "");
           return { username, avatar_url: imgEl ? imgEl.src : "" };
         });
+        // updatedUsers excludes current user (they see "X friends", not themselves)
         const updatedUsers = nowActive
           ? [...prevUsers.filter(u => u.username !== currentUser.username), { username: currentUser.username, avatar_url: currentUser.avatar_url || "" }]
           : prevUsers.filter(u => u.username !== currentUser.username);
+        const friendUsers = updatedUsers.filter(u => u.username !== currentUser.username);
+        const friendCount = friendUsers.length;
 
-        const newBadgeHtml = count > 0
-          ? `<span class="badge badge-also-buying badge-also-buying-clickable" data-id="${updated.id}">🛒 ${count} ${count === 1 ? "friend is" : "friends are"} also buying this ▾</span>
-             <div class="also-buying-list hidden" id="also-list-${updated.id}">${updatedUsers.map(u => `
+        const newBadgeHtml = friendCount > 0
+          ? `<span class="badge badge-also-buying badge-also-buying-clickable" data-id="${updated.id}">🛒 ${friendCount} ${friendCount === 1 ? "friend is" : "friends are"} also buying this ▾</span>
+             <div class="also-buying-list hidden" id="also-list-${updated.id}">${friendUsers.map(u => `
                <span class="also-buying-user">
                  ${u.avatar_url ? `<img src="${u.avatar_url}" class="also-buying-avatar" />` : `<span class="also-buying-initial">${u.username[0].toUpperCase()}</span>`}
                  @${escapeHtml(u.username)}
@@ -356,10 +371,8 @@ async function loadFeed() {
 // ------------------------------------------------------------------
 
 function startPolling() {
-  // Poll stats (clicks + me too counts) every 15 seconds
-  setInterval(pollStats, 15000);
-  // Poll comments every 20 seconds
-  setInterval(pollComments, 20000);
+  setInterval(pollStats, 5000);
+  setInterval(pollComments, 10000);
 }
 
 async function pollStats() {
@@ -367,25 +380,80 @@ async function pollStats() {
   const result = await Api.getPurchaseStats(renderedPurchaseIds);
   if (!result.ok) return;
 
+  const currentUser = Auth.currentUser();
+  const currentUserId = currentUser ? currentUser.id : null;
   const stats = result.data;
+
   for (const [id, s] of Object.entries(stats)) {
     // Update click count
-    const clickEl = document.querySelector(`#clicks-${id} .click-num`);
-    if (clickEl) {
+    const clickLabel = document.querySelector(`#clicks-${id}`);
+    if (clickLabel) {
       const count = s.click_count;
-      clickEl.textContent = count;
-      const label = document.querySelector(`#clicks-${id}`);
-      if (label) label.innerHTML = `👆 <span class="click-num">${count}</span> ${count === 1 ? "person" : "people"} clicked this`;
+      const current = parseInt(clickLabel.querySelector(".click-num")?.textContent || "0");
+      if (count !== current) {
+        clickLabel.innerHTML = `👆 <span class="click-num">${count}</span> ${count === 1 ? "person" : "people"} clicked this`;
+      }
     }
 
-    // Update me too count on badge (only if not currently open/interacting)
-    const badge = document.querySelector(`.badge-also-buying-clickable[data-id="${id}"]`);
-    if (badge) {
-      const count = s.also_buying_count;
-      const label = `🛒 ${count} ${count === 1 ? "friend is" : "friends are"} also buying this ▾`;
-      if (badge.textContent.trim() !== label.trim()) {
-        badge.textContent = label;
-      }
+    // Re-render the whole also-buying section if count changed
+    const section = document.querySelector(`.also-buying-section[data-purchase-id="${id}"]`);
+    if (!section) continue;
+
+    const buyers = s.also_buying || [];
+    const alsoBuyingUsers = s.also_buying_users || [];
+    const count = buyers.length;
+    const iAmBuying = currentUserId && buyers.includes(currentUserId);
+
+    // Check if anything actually changed before touching the DOM
+    const currentCount = parseInt(section.dataset.alsoCount || "0");
+    if (count === currentCount) continue;
+    section.dataset.alsoCount = count;
+
+    // Skip re-render if the dropdown list is currently open (user is reading it)
+    const openList = section.querySelector(`.also-buying-list:not(.hidden)`);
+    if (openList) continue;
+
+    const friendUsers = alsoBuyingUsers.filter(u => u.id !== currentUserId);
+    const friendCount = friendUsers.length;
+    const badgeHtml = friendCount > 0
+      ? `<span class="badge badge-also-buying badge-also-buying-clickable" data-id="${id}">🛒 ${friendCount} ${friendCount === 1 ? "friend is" : "friends are"} also buying this ▾</span>
+         <div class="also-buying-list hidden" id="also-list-${id}">${friendUsers.map(u => `
+           <span class="also-buying-user">
+             ${u.avatar_url ? `<img src="${u.avatar_url}" class="also-buying-avatar" />` : `<span class="also-buying-initial">${u.username[0].toUpperCase()}</span>`}
+             @${escapeHtml(u.username)}
+           </span>`).join("")}</div>`
+      : "";
+
+    const btn = section.querySelector(".btn-also-buying");
+    const btnHtml = btn ? btn.outerHTML : `
+      <button class="btn btn-sm btn-ghost btn-also-buying" data-id="${id}" data-buying="${iAmBuying}">
+        ${iAmBuying ? "✓ Me too — Undo" : "🛒 Me too!"}
+      </button>`;
+
+    section.innerHTML = `${badgeHtml}${btnHtml}`;
+
+    // Re-attach badge click
+    const newBadge = section.querySelector(".badge-also-buying-clickable");
+    if (newBadge) {
+      newBadge.addEventListener("click", (e) => {
+        const list = section.querySelector(`#also-list-${id}`);
+        if (list) list.classList.toggle("hidden");
+      });
+    }
+
+    // Re-attach Me too button click
+    const newBtn = section.querySelector(".btn-also-buying");
+    if (newBtn) {
+      newBtn.addEventListener("click", async () => {
+        newBtn.disabled = true;
+        const isActive = newBtn.dataset.buying === "true";
+        const r = isActive ? await Api.unmarkAlsoBuying(id) : await Api.markAlsoBuying(id);
+        if (!r.ok) {
+          newBtn.disabled = false;
+          alert(r.data?.error || "Could not update.");
+        }
+        // pollStats will re-render automatically on next tick
+      });
     }
   }
 }

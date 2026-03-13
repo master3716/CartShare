@@ -116,7 +116,7 @@ def create_purchase_blueprint(
 
     @bp.route("/stats", methods=["GET"])
     def get_stats():
-        """Return click_count, also_buying_count, comment_count for a list of purchase IDs."""
+        """Return live click_count and also_buying_users for a list of purchase IDs."""
         ids_param = request.args.get("ids", "")
         if not ids_param:
             return jsonify({}), 200
@@ -125,9 +125,15 @@ def create_purchase_blueprint(
         for pid in purchase_ids:
             purchase = purchase_service.get_purchase_by_id(pid)
             if purchase:
+                also_buying_users = []
+                for uid in purchase.also_buying:
+                    u = user_repo.find_by_id(uid)
+                    if u:
+                        also_buying_users.append({"username": u.username, "avatar_url": u.avatar_url, "id": u.id})
                 result[pid] = {
                     "click_count": purchase.click_count,
-                    "also_buying_count": len(purchase.also_buying),
+                    "also_buying": purchase.also_buying,
+                    "also_buying_users": also_buying_users,
                 }
         return jsonify(result), 200
 
