@@ -269,20 +269,34 @@ function buildCard(item) {
         Api.getCollections(),
       ]);
 
+      const purchaseId = saveBtn.dataset.id;
       const existingCats = catResult.ok
         ? [...new Set((catResult.data || []).map(s => s.category))]
         : [];
       const collabs = collabResult.ok ? (collabResult.data || []) : [];
 
-      const catListHtml = existingCats.map(cat => `
-        <button class="collection-popover-item" data-cat="${escapeHtml(cat)}">📁 ${escapeHtml(cat)}</button>
-      `).join("");
+      // Which personal categories already contain this purchase
+      const savedInCats = new Set(
+        (catResult.data || []).filter(s => s.purchase_id === purchaseId).map(s => s.category)
+      );
 
-      const collabListHtml = collabs.map(c => `
-        <button class="collection-popover-item collection-popover-collab" data-collab-id="${escapeHtml(c.id)}" data-requires-approval="${c.requires_approval}" data-owner-id="${escapeHtml(c.owner_id)}">
-          📋 ${escapeHtml(c.name)}${c.requires_approval ? " 🔒" : ""}
-        </button>
-      `).join("");
+      const catListHtml = existingCats.map(cat => {
+        const already = savedInCats.has(cat);
+        return `<button class="collection-popover-item${already ? " collection-popover-item-done" : ""}"
+          data-cat="${escapeHtml(cat)}"${already ? " disabled" : ""}>
+          ${already ? "✓" : "📁"} ${escapeHtml(cat)}
+        </button>`;
+      }).join("");
+
+      const collabListHtml = collabs.map(c => {
+        const already = (c.item_purchase_ids || []).includes(purchaseId) ||
+                        (c.pending_purchase_ids || []).includes(purchaseId);
+        const isOwner = c.owner_id === user.id;
+        return `<button class="collection-popover-item collection-popover-collab${already ? " collection-popover-item-done" : ""}"
+          data-collab-id="${escapeHtml(c.id)}" data-requires-approval="${c.requires_approval}" data-owner-id="${escapeHtml(c.owner_id)}"${already ? " disabled" : ""}>
+          ${already ? "✓" : "📋"} ${escapeHtml(c.name)}${!already && !isOwner && c.requires_approval ? " 🔒" : ""}
+        </button>`;
+      }).join("");
 
       popover.innerHTML = `
         <div class="collection-popover-section-label">Personal</div>
@@ -330,7 +344,7 @@ function buildCard(item) {
       });
 
       // Collaborative collection clicks
-      popover.querySelectorAll(".collection-popover-collab").forEach(btn => {
+      popover.querySelectorAll(".collection-popover-collab:not([disabled])").forEach(btn => {
         const isOwner = btn.dataset.ownerId === user.id;
         btn.addEventListener("click", () => addToCollab(btn.dataset.collabId, !isOwner && btn.dataset.requiresApproval === "true"));
       });

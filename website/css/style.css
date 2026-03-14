@@ -576,7 +576,8 @@ a:hover { text-decoration: underline; }
   cursor: pointer;
   color: #333;
 }
-.collection-popover-item:hover { background: #f5f3ff; }
+.collection-popover-item:not([disabled]):hover { background: #f5f3ff; }
+.collection-popover-item[disabled] { color: #aaa; cursor: default; }
 .collection-popover-divider { border-top: 1px solid #eee; margin: 4px 0; }
 .collection-popover-new { display: flex; gap: 6px; padding: 8px 10px; }
 .collection-popover-input {

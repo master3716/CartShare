@@ -25,6 +25,8 @@ class CollectionService:
             owner = self._user_repo.find_by_id(c.owner_id)
             d["owner_username"] = owner.username if owner else ""
             d["item_count"] = len(c.items)
+            d["item_purchase_ids"] = [i["purchase_id"] for i in c.items]
+            d["pending_purchase_ids"] = [i["purchase_id"] for i in c.pending_items]
             result.append(d)
         return sorted(result, key=lambda x: x["created_at"], reverse=True)
 
