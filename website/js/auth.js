@@ -14,6 +14,8 @@
  */
 
 const Auth = (() => {
+  let _lastBellCount = null;
+
   return {
     /**
      * If there is no token in localStorage, redirect to the login page.
@@ -122,9 +124,13 @@ const Auth = (() => {
       if (!bell || !Api.getToken()) return;
       const result = await Api.getUnreadCount();
       if (result.ok) {
+        const count = result.data.count;
+        if (_lastBellCount !== null && count > _lastBellCount) {
+          showToast("You have new notifications 🔔", "info");
+        }
+        _lastBellCount = count;
         const badge = document.getElementById("nav-bell-badge");
         if (badge) {
-          const count = result.data.count;
           badge.textContent = count > 9 ? "9+" : count > 0 ? count : "";
           badge.style.display = count > 0 ? "flex" : "none";
         }

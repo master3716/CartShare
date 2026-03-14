@@ -615,6 +615,7 @@ a:hover { text-decoration: underline; }
 }
 .toast.show { opacity: 1; }
 .toast.error { background: var(--red); }
+.toast.info { background: var(--primary); }
 
 /* ------------------------------------------------------------------ */
 /* Notifications page                                                   */
