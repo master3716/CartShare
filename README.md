@@ -35,10 +35,6 @@ ShoppyCat lets you save items you buy from online stores, share them with friend
 
 Auto-detects products on: **Amazon**, **AliExpress**, **Temu**, **SHEIN**, **Etsy**
 
-## Running Locally
-
-See [`HOW_TO_RUN.md`](HOW_TO_RUN.md) for full setup instructions.
-
 ---
 
 ## Future Plans
