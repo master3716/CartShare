@@ -96,41 +96,56 @@ function escapeHtml(str) {
 // Load and render the logged-in user's own purchases
 // ------------------------------------------------------------------
 
-async function loadMyPurchases() {
-  const grid = document.getElementById("my-purchases-grid");
-  const spinner = document.getElementById("my-purchases-spinner");
-  const empty = document.getElementById("my-purchases-empty");
+let _purchasesFirstLoad = true;
 
+function _renderPurchases(grid, empty, purchases) {
   grid.innerHTML = "";
-  spinner.classList.remove("hidden");
-
-  const result = await Api.getMyPurchases();
-  spinner.classList.add("hidden");
-
-  if (!result.ok) {
-    grid.innerHTML = `<p class="msg msg-error">${result.data?.error || "Failed to load purchases."}</p>`;
-    return;
-  }
-
-  const purchases = result.data;
   if (!purchases.length) {
     empty.classList.remove("hidden");
     return;
   }
   empty.classList.add("hidden");
+  purchases.forEach(p => grid.appendChild(buildPurchaseCard(p, true)));
+  grid.querySelectorAll(".btn-toggle-visibility").forEach(btn =>
+    btn.addEventListener("click", () => handleToggleVisibility(btn.dataset.id)));
+  grid.querySelectorAll(".btn-delete").forEach(btn =>
+    btn.addEventListener("click", () => handleDelete(btn.dataset.id)));
+}
 
-  purchases.forEach((p) => {
-    const card = buildPurchaseCard(p, true);
-    grid.appendChild(card);
-  });
+async function loadMyPurchases() {
+  const grid    = document.getElementById("my-purchases-grid");
+  const spinner = document.getElementById("my-purchases-spinner");
+  const empty   = document.getElementById("my-purchases-empty");
 
-  // Wire action buttons
-  grid.querySelectorAll(".btn-toggle-visibility").forEach((btn) => {
-    btn.addEventListener("click", () => handleToggleVisibility(btn.dataset.id));
-  });
-  grid.querySelectorAll(".btn-delete").forEach((btn) => {
-    btn.addEventListener("click", () => handleDelete(btn.dataset.id));
-  });
+  // On first load only: show cache immediately so the page feels instant
+  if (_purchasesFirstLoad) {
+    _purchasesFirstLoad = false;
+    const cached = AppCache.get("my_purchases");
+    if (cached) {
+      spinner.classList.add("hidden");
+      _renderPurchases(grid, empty, cached);
+    } else {
+      grid.innerHTML = "";
+      spinner.classList.remove("hidden");
+    }
+  } else {
+    // Revert path — clear and show spinner for accurate fresh data
+    grid.innerHTML = "";
+    spinner.classList.remove("hidden");
+  }
+
+  const result = await Api.getMyPurchases();
+  spinner.classList.add("hidden");
+
+  if (!result.ok) {
+    if (!grid.children.length)
+      grid.innerHTML = `<p class="msg msg-error">${result.data?.error || "Failed to load purchases."}</p>`;
+    return;
+  }
+
+  const purchases = result.data;
+  AppCache.set("my_purchases", purchases);
+  _renderPurchases(grid, empty, purchases);
 }
 
 // ------------------------------------------------------------------
@@ -138,32 +153,41 @@ async function loadMyPurchases() {
 // ------------------------------------------------------------------
 
 async function loadFriendsFeed() {
-  const grid = document.getElementById("feed-grid");
+  const grid    = document.getElementById("feed-grid");
   const spinner = document.getElementById("feed-spinner");
-  const empty = document.getElementById("feed-empty");
+  const empty   = document.getElementById("feed-empty");
 
-  grid.innerHTML = "";
-  spinner.classList.remove("hidden");
+  const cached = AppCache.get("dashboard_feed");
+  if (cached) {
+    spinner.classList.add("hidden");
+    if (cached.length) {
+      empty.classList.add("hidden");
+      cached.forEach(item => grid.appendChild(buildPurchaseCard(item, false, item.friend_username)));
+    } else {
+      empty.classList.remove("hidden");
+    }
+  } else {
+    grid.innerHTML = "";
+    spinner.classList.remove("hidden");
+  }
 
   const result = await Api.getFriendsFeed();
   spinner.classList.add("hidden");
 
   if (!result.ok) {
-    grid.innerHTML = `<p class="msg msg-error">${result.data?.error || "Failed to load feed."}</p>`;
+    if (!cached) grid.innerHTML = `<p class="msg msg-error">${result.data?.error || "Failed to load feed."}</p>`;
     return;
   }
 
   const feed = result.data;
-  if (!feed.length) {
-    empty.classList.remove("hidden");
-    return;
-  }
-  empty.classList.add("hidden");
+  AppCache.set("dashboard_feed", feed);
 
-  feed.forEach((item) => {
-    const card = buildPurchaseCard(item, false, item.friend_username);
-    grid.appendChild(card);
-  });
+  // Re-render only if the content changed
+  if (JSON.stringify(feed.map(i => i.id)) === JSON.stringify((cached || []).map(i => i.id))) return;
+  grid.innerHTML = "";
+  if (!feed.length) { empty.classList.remove("hidden"); return; }
+  empty.classList.add("hidden");
+  feed.forEach(item => grid.appendChild(buildPurchaseCard(item, false, item.friend_username)));
 }
 
 // ------------------------------------------------------------------

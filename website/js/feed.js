@@ -416,28 +416,56 @@ function buildCard(item) {
 const renderedPurchaseIds = [];
 
 async function loadFeed() {
+  const loadingEl  = document.getElementById("feed-loading");
+  const emptyEl    = document.getElementById("feed-empty");
+  const container  = document.getElementById("feed-container");
+
+  // Show cached feed instantly — no spinner on repeat visits
+  const cached = AppCache.get("feed");
+  if (cached && cached.length > 0) {
+    loadingEl.classList.add("hidden");
+    cached.forEach(item => {
+      container.appendChild(buildCard(item));
+      renderedPurchaseIds.push(item.id);
+    });
+    startPolling();
+  }
+
+  // Always fetch fresh data (background on cache hit, foreground on first visit)
   const result = await Api.getFriendsFeed();
 
-  document.getElementById("feed-loading").classList.add("hidden");
-
   if (!result.ok) {
-    document.getElementById("feed-empty").classList.remove("hidden");
+    if (!cached) {
+      loadingEl.classList.add("hidden");
+      emptyEl.classList.remove("hidden");
+    }
     return;
   }
 
   const items = result.data || [];
-  if (items.length === 0) {
-    document.getElementById("feed-empty").classList.remove("hidden");
-    return;
+  AppCache.set("feed", items);
+
+  if (cached) {
+    // Only prepend items that weren't in the cached render
+    const existingIds = new Set(renderedPurchaseIds);
+    const newItems = items.filter(item => !existingIds.has(item.id));
+    newItems.forEach(item => {
+      container.insertBefore(buildCard(item), container.firstChild);
+      renderedPurchaseIds.unshift(item.id);
+    });
+  } else {
+    // First visit — normal render
+    loadingEl.classList.add("hidden");
+    if (items.length === 0) {
+      emptyEl.classList.remove("hidden");
+      return;
+    }
+    items.forEach(item => {
+      container.appendChild(buildCard(item));
+      renderedPurchaseIds.push(item.id);
+    });
+    startPolling();
   }
-
-  const container = document.getElementById("feed-container");
-  items.forEach((item) => {
-    container.appendChild(buildCard(item));
-    renderedPurchaseIds.push(item.id);
-  });
-
-  startPolling();
 }
 
 // ------------------------------------------------------------------

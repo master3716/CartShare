@@ -44,24 +44,13 @@ const spinner  = document.getElementById("collections-spinner");
 const emptyEl  = document.getElementById("collections-empty");
 const listEl   = document.getElementById("collections-list");
 
-async function loadCollections() {
+function _renderCollectionRows(savedItems, collabs) {
   listEl.innerHTML = "";
-  spinner.classList.remove("hidden");
-  emptyEl.classList.add("hidden");
-
-  const [savedRes, collabRes] = await Promise.all([
-    Api.getSavedItems(),
-    Api.getCollections(),
-  ]);
-
-  spinner.classList.add("hidden");
-
   const rows = [];
 
-  // Personal categories from saved items
-  if (savedRes.ok && savedRes.data.length) {
+  if (savedItems && savedItems.length) {
     const byCategory = {};
-    for (const saved of savedRes.data) {
+    for (const saved of savedItems) {
       if (!byCategory[saved.category]) byCategory[saved.category] = [];
       byCategory[saved.category].push(saved);
     }
@@ -70,19 +59,49 @@ async function loadCollections() {
     }
   }
 
-  // Collaborative collections
-  if (collabRes.ok && collabRes.data.length) {
-    for (const c of collabRes.data) {
-      rows.push(buildCollabRow(c));
-    }
+  if (collabs && collabs.length) {
+    for (const c of collabs) rows.push(buildCollabRow(c));
   }
 
   if (rows.length === 0) {
     emptyEl.classList.remove("hidden");
     return;
   }
-
+  emptyEl.classList.add("hidden");
   rows.forEach(r => listEl.appendChild(r));
+}
+
+async function loadCollections() {
+  emptyEl.classList.add("hidden");
+
+  // On first load only: show cache immediately
+  if (_collectionsFirstLoad) {
+    _collectionsFirstLoad = false;
+    const cached = AppCache.get("collections");
+    if (cached) {
+      spinner.classList.add("hidden");
+      _renderCollectionRows(cached.savedItems, cached.collabs);
+    } else {
+      listEl.innerHTML = "";
+      spinner.classList.remove("hidden");
+    }
+  } else {
+    listEl.innerHTML = "";
+    spinner.classList.remove("hidden");
+  }
+
+  const [savedRes, collabRes] = await Promise.all([
+    Api.getSavedItems(),
+    Api.getCollections(),
+  ]);
+
+  spinner.classList.add("hidden");
+
+  const savedItems = savedRes.ok ? savedRes.data : [];
+  const collabs    = collabRes.ok ? collabRes.data : [];
+  AppCache.set("collections", { savedItems, collabs });
+
+  _renderCollectionRows(savedItems, collabs);
 }
 
 function buildPersonalRow(category, items) {
@@ -207,6 +226,7 @@ const btnLeave           = document.getElementById("btn-leave");
 const btnDeleteColl      = document.getElementById("btn-delete-collection");
 
 let currentCollabId = null;
+let _collectionsFirstLoad = true;
 let collabItemsAbort = null;
 let pendingAbort = null;
 let collabPollInterval = null;
