@@ -248,114 +248,142 @@ function buildCard(item) {
     saveBtn.addEventListener("click", async (e) => {
       e.stopPropagation();
 
-      // Remove any existing popover
       document.querySelectorAll(".collection-popover").forEach(p => p.remove());
 
-      // Show popover immediately with a loading state
+      const purchaseId = saveBtn.dataset.id;
+
       const popover = document.createElement("div");
       popover.className = "collection-popover";
-      popover.innerHTML = `<div class="collection-popover-section-label" style="color:#999;">Loading…</div>`;
       saveBtn.parentElement.style.position = "relative";
       saveBtn.parentElement.appendChild(popover);
 
-      // Close on outside click
       setTimeout(() => {
         document.addEventListener("click", () => popover.remove(), { once: true });
       }, 0);
 
-      // Fetch personal categories and collaborative collections in parallel
-      const [catResult, collabResult] = await Promise.all([
-        Api.getSavedItems(),
-        Api.getCollections(),
-      ]);
-
-      const purchaseId = saveBtn.dataset.id;
-      const existingCats = catResult.ok
-        ? [...new Set((catResult.data || []).map(s => s.category))]
-        : [];
-      const collabs = collabResult.ok ? (collabResult.data || []) : [];
-
-      // Which personal categories already contain this purchase
-      const savedInCats = new Set(
-        (catResult.data || []).filter(s => s.purchase_id === purchaseId).map(s => s.category)
-      );
-
-      const catListHtml = existingCats.map(cat => {
-        const already = savedInCats.has(cat);
-        return `<button class="collection-popover-item${already ? " collection-popover-item-done" : ""}"
-          data-cat="${escapeHtml(cat)}"${already ? " disabled" : ""}>
-          ${already ? "✓" : "📁"} ${escapeHtml(cat)}
-        </button>`;
-      }).join("");
-
-      const collabListHtml = collabs.map(c => {
-        const already = (c.item_purchase_ids || []).includes(purchaseId) ||
-                        (c.pending_purchase_ids || []).includes(purchaseId);
-        const isOwner = c.owner_id === user.id;
-        return `<button class="collection-popover-item collection-popover-collab${already ? " collection-popover-item-done" : ""}"
-          data-collab-id="${escapeHtml(c.id)}" data-requires-approval="${c.requires_approval}" data-owner-id="${escapeHtml(c.owner_id)}"${already ? " disabled" : ""}>
-          ${already ? "✓" : "📋"} ${escapeHtml(c.name)}${!already && !isOwner && c.requires_approval ? " 🔒" : ""}
-        </button>`;
-      }).join("");
-
-      popover.innerHTML = `
-        <div class="collection-popover-section-label">Personal</div>
-        ${catListHtml}
-        <div class="collection-popover-new">
-          <input class="collection-popover-input" type="text" placeholder="New category…" maxlength="50" />
-          <button class="collection-popover-add btn btn-sm btn-primary">Add</button>
-        </div>
-        ${collabs.length ? `
-          <div class="collection-popover-divider"></div>
-          <div class="collection-popover-section-label">Collaborative</div>
-          ${collabListHtml}
-        ` : ""}
-      `;
-      popover.querySelector(".collection-popover-input").focus();
-
+      // Action: save to personal category
       async function saveToCategory(category) {
         if (!category || !category.trim()) return;
         const prevText = saveBtn.textContent;
         popover.remove();
-        // Optimistic: show saved immediately
         saveBtn.textContent = "📁 Saved!";
-        const result = await Api.saveItem(saveBtn.dataset.id, category.trim());
-        if (!result.ok) {
+        const result = await Api.saveItem(purchaseId, category.trim());
+        if (result.ok) {
+          // Update cache so next popover open reflects the new saved item
+          const c = AppCache.get("collections");
+          if (c) {
+            c.savedItems = [...(c.savedItems || []), { id: result.data?.id || ("t" + Date.now()), purchase_id: purchaseId, category: category.trim() }];
+            AppCache.set("collections", c);
+          }
+        } else {
           saveBtn.textContent = prevText;
           showToast("Something went wrong, the item wasn't saved.");
         }
       }
 
+      // Action: add to collaborative collection
       async function addToCollab(collabId, requiresApproval) {
         const prevText = saveBtn.textContent;
         popover.remove();
-        // Optimistic: show expected outcome immediately based on approval setting
         saveBtn.textContent = requiresApproval ? "⏳ Pending approval" : "📋 Added!";
-        const result = await Api.addCollectionItem(collabId, saveBtn.dataset.id);
-        if (!result.ok) {
+        const result = await Api.addCollectionItem(collabId, purchaseId);
+        if (result.ok) {
+          // Update cache so next popover open shows this collection as already added
+          const c = AppCache.get("collections");
+          if (c) {
+            const coll = (c.collabs || []).find(col => col.id === collabId);
+            if (coll) {
+              if (requiresApproval) {
+                coll.pending_purchase_ids = [...(coll.pending_purchase_ids || []), purchaseId];
+              } else {
+                coll.item_purchase_ids = [...(coll.item_purchase_ids || []), purchaseId];
+              }
+              AppCache.set("collections", c);
+            }
+          }
+        } else {
           saveBtn.textContent = prevText;
           showToast(result.data?.error || "Something went wrong.");
         }
       }
 
-      // Personal category clicks
-      popover.querySelectorAll(".collection-popover-item:not(.collection-popover-collab)").forEach(btn => {
-        btn.addEventListener("click", () => saveToCategory(btn.dataset.cat));
-      });
+      // Build and wire popover content from data
+      function fillPopover(savedItems, collabs) {
+        const existingCats = [...new Set((savedItems || []).map(s => s.category))];
+        const savedInCats = new Set(
+          (savedItems || []).filter(s => s.purchase_id === purchaseId).map(s => s.category)
+        );
 
-      // Collaborative collection clicks
-      popover.querySelectorAll(".collection-popover-collab:not([disabled])").forEach(btn => {
-        const isOwner = btn.dataset.ownerId === user.id;
-        btn.addEventListener("click", () => addToCollab(btn.dataset.collabId, !isOwner && btn.dataset.requiresApproval === "true"));
-      });
+        const catListHtml = existingCats.map(cat => {
+          const already = savedInCats.has(cat);
+          return `<button class="collection-popover-item${already ? " collection-popover-item-done" : ""}"
+            data-cat="${escapeHtml(cat)}"${already ? " disabled" : ""}>
+            ${already ? "✓" : "📁"} ${escapeHtml(cat)}
+          </button>`;
+        }).join("");
 
-      // New personal category
-      const newInput = popover.querySelector(".collection-popover-input");
-      popover.querySelector(".collection-popover-add").addEventListener("click", () => saveToCategory(newInput.value));
-      newInput.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") saveToCategory(newInput.value);
-        if (e.key === "Escape") popover.remove();
-      });
+        const collabListHtml = (collabs || []).map(c => {
+          const already = (c.item_purchase_ids || []).includes(purchaseId) ||
+                          (c.pending_purchase_ids || []).includes(purchaseId);
+          const isOwner = c.owner_id === user.id;
+          return `<button class="collection-popover-item collection-popover-collab${already ? " collection-popover-item-done" : ""}"
+            data-collab-id="${escapeHtml(c.id)}" data-requires-approval="${c.requires_approval}" data-owner-id="${escapeHtml(c.owner_id)}"${already ? " disabled" : ""}>
+            ${already ? "✓" : "📋"} ${escapeHtml(c.name)}${!already && !isOwner && c.requires_approval ? " 🔒" : ""}
+          </button>`;
+        }).join("");
+
+        popover.innerHTML = `
+          <div class="collection-popover-section-label">Personal</div>
+          ${catListHtml}
+          <div class="collection-popover-new">
+            <input class="collection-popover-input" type="text" placeholder="New category…" maxlength="50" />
+            <button class="collection-popover-add btn btn-sm btn-primary">Add</button>
+          </div>
+          ${(collabs || []).length ? `
+            <div class="collection-popover-divider"></div>
+            <div class="collection-popover-section-label">Collaborative</div>
+            ${collabListHtml}
+          ` : ""}
+        `;
+
+        const newInput = popover.querySelector(".collection-popover-input");
+        popover.querySelectorAll(".collection-popover-item:not(.collection-popover-collab)").forEach(btn => {
+          btn.addEventListener("click", () => saveToCategory(btn.dataset.cat));
+        });
+        popover.querySelectorAll(".collection-popover-collab:not([disabled])").forEach(btn => {
+          const isOwner = btn.dataset.ownerId === user.id;
+          btn.addEventListener("click", () => addToCollab(btn.dataset.collabId, !isOwner && btn.dataset.requiresApproval === "true"));
+        });
+        popover.querySelector(".collection-popover-add").addEventListener("click", () => saveToCategory(newInput.value));
+        newInput.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") saveToCategory(newInput.value);
+          if (e.key === "Escape") popover.remove();
+        });
+      }
+
+      // Show cached collections immediately — no loading state on repeat opens
+      const cached = AppCache.get("collections");
+      if (cached) {
+        fillPopover(cached.savedItems, cached.collabs);
+        popover.querySelector(".collection-popover-input")?.focus();
+      } else {
+        popover.innerHTML = `<div class="collection-popover-section-label" style="color:#999;">Loading…</div>`;
+      }
+
+      // Fetch fresh data in background and update cache
+      const [catResult, collabResult] = await Promise.all([
+        Api.getSavedItems(),
+        Api.getCollections(),
+      ]);
+      const savedItems = catResult.ok ? catResult.data : (cached?.savedItems || []);
+      const collabs    = collabResult.ok ? collabResult.data : (cached?.collabs || []);
+      AppCache.set("collections", { savedItems, collabs });
+
+      // Rebuild popover with fresh data if it's still open
+      if (popover.isConnected) {
+        fillPopover(savedItems, collabs);
+        popover.querySelector(".collection-popover-input")?.focus();
+      }
     });
   }
 
