@@ -23,9 +23,11 @@
     </div>
   </nav>
 
-  <div class="container">
+  <!-- ============================================================
+       MAIN VIEW — unified list + create form
+  ============================================================ -->
+  <div id="main-view" class="container">
 
-    <!-- Create a new collection -->
     <section class="card">
       <h2 class="card-title">New Collaborative Collection</h2>
       <p style="color:#666;font-size:13px;margin-bottom:14px;">
@@ -41,11 +43,13 @@
       <div id="create-msg" class="msg hidden" style="margin-top:10px;"></div>
     </section>
 
-    <!-- Collections list -->
     <section class="card">
       <div class="section-header">
-        <h2 class="section-title">My Collections</h2>
+        <h2 class="section-title">All Collections</h2>
       </div>
+      <p style="color:#666;font-size:13px;margin-bottom:16px;">
+        Your personal saved-item categories and collaborative boards.
+      </p>
 
       <div id="collections-spinner" class="spinner-wrap">
         <span class="spinner-sm"></span> Loading…
@@ -53,26 +57,74 @@
 
       <div id="collections-empty" class="empty-state hidden">
         <div class="icon">📋</div>
-        <p>No collections yet.<br />Create one above and invite friends to add items together!</p>
+        <p>No collections yet.<br />Save items from the Feed, or create a collaborative board above.</p>
       </div>
 
       <div id="collections-list" class="collection-list"></div>
     </section>
 
-    <!-- Collection detail (shown when a collection is opened) -->
-    <section id="collection-detail" class="card hidden">
+  </div>
+
+  <!-- ============================================================
+       PERSONAL CATEGORY DETAIL VIEW
+  ============================================================ -->
+  <div id="personal-view" class="container hidden">
+    <section class="card">
       <div class="section-header">
-        <h2 id="detail-name" class="section-title"></h2>
-        <button id="btn-back" class="btn btn-ghost btn-sm">← Back</button>
+        <button id="btn-back-personal" class="btn btn-ghost btn-sm">← Collections</button>
+        <h2 id="personal-name" class="section-title"></h2>
       </div>
 
-      <div id="detail-members" class="collection-member-chips" style="margin-bottom:16px;"></div>
+      <div id="personal-empty" class="empty-state hidden">
+        <div class="icon">📭</div>
+        <p>Nothing in this category.</p>
+      </div>
 
-      <!-- Invite member (owner only) -->
+      <div id="personal-grid" class="purchase-grid"></div>
+    </section>
+  </div>
+
+  <!-- ============================================================
+       COLLABORATIVE COLLECTION DETAIL VIEW (profile-style)
+  ============================================================ -->
+  <div id="collab-view" class="container hidden">
+
+    <!-- Header card: name + member avatar strip -->
+    <section class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+        <button id="btn-back-collab" class="btn btn-ghost btn-sm">← Collections</button>
+        <h2 id="collab-name" style="font-size:20px;font-weight:700;"></h2>
+        <div style="width:120px;"></div><!-- spacer -->
+      </div>
+
+      <!-- Collaborator avatars -->
+      <div id="collab-members-strip" style="display:flex;gap:20px;flex-wrap:wrap;justify-content:center;padding:8px 0 4px;"></div>
+    </section>
+
+    <!-- Items card -->
+    <section class="card">
+      <div class="section-header" style="margin-bottom:12px;">
+        <h3 style="font-size:16px;font-weight:600;">Items</h3>
+      </div>
+
+      <div id="collab-items-spinner" class="spinner-wrap hidden">
+        <span class="spinner-sm"></span> Loading…
+      </div>
+
+      <div id="collab-items-empty" class="empty-state hidden">
+        <div class="icon">📭</div>
+        <p>No items yet. Add the first one!</p>
+      </div>
+
+      <div id="collab-items-grid" class="purchase-grid"></div>
+    </section>
+
+    <!-- Controls card: add item, invite, leave/delete -->
+    <section class="card" id="collab-controls">
       <div id="invite-section" class="hidden" style="margin-bottom:20px;">
+        <h3 style="font-size:14px;font-weight:600;margin-bottom:8px;">Invite a Friend</h3>
         <form id="invite-form" style="display:flex;gap:8px;align-items:flex-end;">
           <div class="form-group" style="flex:1;margin-bottom:0;">
-            <label for="invite-username">Invite a friend by username</label>
             <input id="invite-username" type="text" placeholder="username" />
           </div>
           <button type="submit" class="btn btn-primary btn-sm">Invite</button>
@@ -80,33 +132,18 @@
         <div id="invite-msg" class="msg hidden" style="margin-top:8px;"></div>
       </div>
 
-      <!-- Add an item from feed -->
       <div style="margin-bottom:20px;">
-        <p style="font-size:13px;color:#666;margin-bottom:10px;">
-          Add a purchase by ID (paste the purchase ID from a friend's item):
-        </p>
+        <h3 style="font-size:14px;font-weight:600;margin-bottom:8px;">Add Item by Purchase ID</h3>
         <form id="add-item-form" style="display:flex;gap:8px;align-items:flex-end;">
           <div class="form-group" style="flex:1;margin-bottom:0;">
-            <input id="add-item-purchase-id" type="text" placeholder="Purchase ID…" />
+            <input id="add-item-purchase-id" type="text" placeholder="Paste a purchase ID…" />
           </div>
-          <button type="submit" class="btn btn-primary btn-sm">Add Item</button>
+          <button type="submit" class="btn btn-primary btn-sm">Add</button>
         </form>
         <div id="add-item-msg" class="msg hidden" style="margin-top:8px;"></div>
       </div>
 
-      <div id="detail-spinner" class="spinner-wrap hidden">
-        <span class="spinner-sm"></span> Loading items…
-      </div>
-
-      <div id="detail-empty" class="empty-state hidden">
-        <div class="icon">📭</div>
-        <p>No items yet. Add the first one!</p>
-      </div>
-
-      <div id="detail-items" class="purchase-grid"></div>
-
-      <!-- Danger zone -->
-      <div style="margin-top:24px;padding-top:16px;border-top:1px solid #eee;display:flex;gap:10px;flex-wrap:wrap;">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
         <button id="btn-leave" class="btn btn-danger btn-sm hidden">Leave Collection</button>
         <button id="btn-delete-collection" class="btn btn-danger btn-sm hidden">Delete Collection</button>
       </div>

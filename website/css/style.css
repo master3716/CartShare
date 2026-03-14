@@ -622,7 +622,7 @@ a:hover { text-decoration: underline; }
 .notif-unread { background: #f5f3ff; border-radius: 8px; padding: 0 8px; margin: 0 -8px; }
 
 /* ------------------------------------------------------------------ */
-/* Collaborative collections page                                       */
+/* Collections page                                                     */
 /* ------------------------------------------------------------------ */
 .collection-list { display: flex; flex-direction: column; gap: 12px; }
 .collection-item {
@@ -641,14 +641,30 @@ a:hover { text-decoration: underline; }
 .collection-item-info { display: flex; flex-direction: column; gap: 3px; }
 .collection-item-name { font-size: 15px; font-weight: 600; color: #222; }
 .collection-item-meta { font-size: 12px; color: var(--grey); }
-.collection-member-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-.collection-member-chip {
+
+/* Collaborative collection member avatar strip */
+.collab-member {
   display: flex;
+  flex-direction: column;
   align-items: center;
   gap: 6px;
-  background: #eeeef8;
-  border-radius: 20px;
-  padding: 4px 10px;
-  font-size: 12px;
-  color: #3d3a8a;
+  text-align: center;
 }
+.collab-member-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
+.collab-member-avatar-initial {
+  background: var(--green-light);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: 700;
+}
+.collab-member-name { font-size: 12px; color: #444; font-weight: 500; }
+.collab-member-label { font-size: 10px; color: var(--green-light); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
