@@ -11,6 +11,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ShoppyCat — Login</title>
   <link rel="stylesheet" href="css/style.css" />
+  <link rel="preconnect" href="https://cartshare.onrender.com" />
+  <link rel="dns-prefetch" href="https://cartshare.onrender.com" />
 </head>
 <body class="auth-page">
 
@@ -69,6 +71,7 @@
 
   <script src="js/config.js"></script>
   <script src="js/api.js"></script>
+  <script src="js/cache.js"></script>
   <script src="js/auth.js"></script>
   <script>
     /*
@@ -111,6 +114,25 @@
       btn.textContent = "Login";
 
       if (result.ok) {
+        btn.textContent = "Loading…";
+        try {
+          const [feedRes, purchasesRes, savedRes, collabsRes, friendsRes, pendingRes, notifRes] =
+            await Promise.all([
+              Api.getFriendsFeed(),
+              Api.getMyPurchases(),
+              Api.getSavedItems(),
+              Api.getCollections(),
+              Api.getFriends(),
+              Api.getPendingRequests(),
+              Api.getNotifications(),
+            ]);
+          if (feedRes.ok) AppCache.set("feed", feedRes.data);
+          if (purchasesRes.ok) AppCache.set("my_purchases", purchasesRes.data);
+          if (savedRes.ok && collabsRes.ok) AppCache.set("collections", { savedItems: savedRes.data, collabs: collabsRes.data });
+          if (friendsRes.ok) AppCache.set("friends", friendsRes.data);
+          if (pendingRes.ok) AppCache.set("pending_requests", pendingRes.data);
+          if (notifRes.ok) AppCache.set("notifications", notifRes.data);
+        } catch {}
         window.location.href = "feed.html";
       } else {
         errEl.textContent = result.data?.error || "Login failed.";

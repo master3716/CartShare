@@ -30,7 +30,7 @@ function buildPurchaseCard(purchase, isOwner, friendUsername) {
 
   // Image or placeholder emoji
   const imgHtml = purchase.image_url
-    ? `<img class="purchase-card-img" src="${escapeHtml(purchase.image_url)}" alt="product image" />`
+    ? `<img class="purchase-card-img" src="${escapeHtml(purchase.image_url)}" alt="product image" loading="lazy" />`
     : `<div class="purchase-card-img-placeholder">${purchase.platform === "amazon" ? "📦" : "🛍️"}</div>`;
 
   const badge = purchase.is_public

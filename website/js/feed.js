@@ -184,7 +184,7 @@ function buildCard(item) {
     </div>
 
     ${item.image_url
-      ? `<img class="social-card-img" src="${item.image_url}" alt="${item.item_name}" />`
+      ? `<img class="social-card-img" src="${item.image_url}" alt="${item.item_name}" loading="lazy" />`
       : `<div class="social-card-img-placeholder">🛍️</div>`
     }
 
