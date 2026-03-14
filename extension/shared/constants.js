@@ -38,4 +38,5 @@ const EXTENSION_CONSTANTS = {
   PLATFORM_ALIEXPRESS: "aliexpress",
   PLATFORM_TEMU: "temu",
   PLATFORM_SHEIN: "shein",
+  PLATFORM_ETSY: "etsy",
 };

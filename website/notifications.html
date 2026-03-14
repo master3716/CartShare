@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ShoppyCat — Notifications</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <nav class="navbar">
+    <span class="nav-brand">🐱 ShoppyCat</span>
+    <div class="nav-links">
+      <a href="feed.html">Feed</a>
+      <a href="dashboard.html">My List</a>
+      <a href="friends.html">Friends</a>
+      <a href="collections.html">Collections</a>
+      <a href="notifications.html" class="active" id="nav-bell" style="position:relative;" title="Notifications">🔔<span id="nav-bell-badge" class="nav-bell-badge" style="display:none;"></span></a>
+      <span id="nav-username" style="color:rgba(255,255,255,0.7);font-size:13px;"></span>
+      <button id="btn-logout" class="btn btn-ghost btn-sm" style="color:#fff;border-color:rgba(255,255,255,0.4);">
+        Logout
+      </button>
+    </div>
+  </nav>
+
+  <div class="container">
+    <section class="card">
+      <div class="section-header">
+        <h2 class="section-title">Notifications</h2>
+        <button id="btn-mark-all-read" class="btn btn-ghost btn-sm">Mark all read</button>
+      </div>
+
+      <div id="notif-spinner" class="spinner-wrap">
+        <span class="spinner-sm"></span> Loading…
+      </div>
+
+      <div id="notif-empty" class="empty-state hidden">
+        <div class="icon">🔔</div>
+        <p>No notifications yet.</p>
+      </div>
+
+      <div id="notif-list"></div>
+    </section>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/notifications.js"></script>
+</body>
+</html>

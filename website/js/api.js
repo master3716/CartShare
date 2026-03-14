@@ -231,5 +231,66 @@ const Api = (() => {
     async getPurchaseStats(ids) {
       return request(`/purchases/stats?ids=${ids.join(",")}`);
     },
+
+    async getNotifications() {
+      return request("/notifications", {}, true);
+    },
+
+    async getUnreadCount() {
+      return request("/notifications/unread-count", {}, true);
+    },
+
+    async markNotificationRead(notificationId) {
+      return request(`/notifications/${notificationId}/read`, { method: "POST" }, true);
+    },
+
+    async markAllNotificationsRead() {
+      return request("/notifications/read-all", { method: "POST" }, true);
+    },
+
+    async getCollections() {
+      return request("/collections", {}, true);
+    },
+
+    async getCollection(collectionId) {
+      return request(`/collections/${collectionId}`, {}, true);
+    },
+
+    async createCollection(name) {
+      return request("/collections", {
+        method: "POST",
+        body: JSON.stringify({ name }),
+      }, true);
+    },
+
+    async deleteCollection(collectionId) {
+      return request(`/collections/${collectionId}`, { method: "DELETE" }, true);
+    },
+
+    async inviteCollectionMember(collectionId, username) {
+      return request(`/collections/${collectionId}/members`, {
+        method: "POST",
+        body: JSON.stringify({ username }),
+      }, true);
+    },
+
+    async leaveCollection(collectionId) {
+      return request(`/collections/${collectionId}/members/leave`, { method: "POST" }, true);
+    },
+
+    async removeCollectionMember(collectionId, memberId) {
+      return request(`/collections/${collectionId}/members/${memberId}`, { method: "DELETE" }, true);
+    },
+
+    async addCollectionItem(collectionId, purchaseId) {
+      return request(`/collections/${collectionId}/items`, {
+        method: "POST",
+        body: JSON.stringify({ purchase_id: purchaseId }),
+      }, true);
+    },
+
+    async removeCollectionItem(collectionId, purchaseId) {
+      return request(`/collections/${collectionId}/items/${purchaseId}`, { method: "DELETE" }, true);
+    },
   };
 })();

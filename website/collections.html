@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ShoppyCat — Collections</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <nav class="navbar">
+    <span class="nav-brand">🐱 ShoppyCat</span>
+    <div class="nav-links">
+      <a href="feed.html">Feed</a>
+      <a href="dashboard.html">My List</a>
+      <a href="friends.html">Friends</a>
+      <a href="collections.html" class="active">Collections</a>
+      <a href="notifications.html" id="nav-bell" style="position:relative;" title="Notifications">🔔<span id="nav-bell-badge" class="nav-bell-badge" style="display:none;"></span></a>
+      <span id="nav-username" style="color:rgba(255,255,255,0.7);font-size:13px;"></span>
+      <button id="btn-logout" class="btn btn-ghost btn-sm" style="color:#fff;border-color:rgba(255,255,255,0.4);">
+        Logout
+      </button>
+    </div>
+  </nav>
+
+  <div class="container">
+
+    <!-- Create a new collection -->
+    <section class="card">
+      <h2 class="card-title">New Collaborative Collection</h2>
+      <p style="color:#666;font-size:13px;margin-bottom:14px;">
+        Create a shared board where you and your friends can add items together.
+      </p>
+      <form id="create-collection-form" style="display:flex;gap:10px;align-items:flex-end;">
+        <div class="form-group" style="flex:1;margin-bottom:0;">
+          <label for="collection-name-input">Collection name</label>
+          <input id="collection-name-input" type="text" placeholder="e.g. Road Trip Gear, Gift Ideas…" maxlength="60" required />
+        </div>
+        <button type="submit" class="btn btn-primary">Create</button>
+      </form>
+      <div id="create-msg" class="msg hidden" style="margin-top:10px;"></div>
+    </section>
+
+    <!-- Collections list -->
+    <section class="card">
+      <div class="section-header">
+        <h2 class="section-title">My Collections</h2>
+      </div>
+
+      <div id="collections-spinner" class="spinner-wrap">
+        <span class="spinner-sm"></span> Loading…
+      </div>
+
+      <div id="collections-empty" class="empty-state hidden">
+        <div class="icon">📋</div>
+        <p>No collections yet.<br />Create one above and invite friends to add items together!</p>
+      </div>
+
+      <div id="collections-list" class="collection-list"></div>
+    </section>
+
+    <!-- Collection detail (shown when a collection is opened) -->
+    <section id="collection-detail" class="card hidden">
+      <div class="section-header">
+        <h2 id="detail-name" class="section-title"></h2>
+        <button id="btn-back" class="btn btn-ghost btn-sm">← Back</button>
+      </div>
+
+      <div id="detail-members" class="collection-member-chips" style="margin-bottom:16px;"></div>
+
+      <!-- Invite member (owner only) -->
+      <div id="invite-section" class="hidden" style="margin-bottom:20px;">
+        <form id="invite-form" style="display:flex;gap:8px;align-items:flex-end;">
+          <div class="form-group" style="flex:1;margin-bottom:0;">
+            <label for="invite-username">Invite a friend by username</label>
+            <input id="invite-username" type="text" placeholder="username" />
+          </div>
+          <button type="submit" class="btn btn-primary btn-sm">Invite</button>
+        </form>
+        <div id="invite-msg" class="msg hidden" style="margin-top:8px;"></div>
+      </div>
+
+      <!-- Add an item from feed -->
+      <div style="margin-bottom:20px;">
+        <p style="font-size:13px;color:#666;margin-bottom:10px;">
+          Add a purchase by ID (paste the purchase ID from a friend's item):
+        </p>
+        <form id="add-item-form" style="display:flex;gap:8px;align-items:flex-end;">
+          <div class="form-group" style="flex:1;margin-bottom:0;">
+            <input id="add-item-purchase-id" type="text" placeholder="Purchase ID…" />
+          </div>
+          <button type="submit" class="btn btn-primary btn-sm">Add Item</button>
+        </form>
+        <div id="add-item-msg" class="msg hidden" style="margin-top:8px;"></div>
+      </div>
+
+      <div id="detail-spinner" class="spinner-wrap hidden">
+        <span class="spinner-sm"></span> Loading items…
+      </div>
+
+      <div id="detail-empty" class="empty-state hidden">
+        <div class="icon">📭</div>
+        <p>No items yet. Add the first one!</p>
+      </div>
+
+      <div id="detail-items" class="purchase-grid"></div>
+
+      <!-- Danger zone -->
+      <div style="margin-top:24px;padding-top:16px;border-top:1px solid #eee;display:flex;gap:10px;flex-wrap:wrap;">
+        <button id="btn-leave" class="btn btn-danger btn-sm hidden">Leave Collection</button>
+        <button id="btn-delete-collection" class="btn btn-danger btn-sm hidden">Delete Collection</button>
+      </div>
+    </section>
+
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/collections.js"></script>
+</body>
+</html>

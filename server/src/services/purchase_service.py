@@ -16,7 +16,7 @@ from src.repositories.purchase_repository import PurchaseRepository
 
 # Valid values for the `platform` field.  Any value outside this set is
 # rejected so we never store garbage data.
-VALID_PLATFORMS = {"amazon", "aliexpress", "temu", "shein"}
+VALID_PLATFORMS = {"amazon", "aliexpress", "temu", "shein", "etsy"}
 
 
 class PurchaseService:

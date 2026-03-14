@@ -111,6 +111,23 @@ const Auth = (() => {
       });
 
       navLinks.insertBefore(avatarBtn, usernameEl);
+
+      // Load notification bell unread count
+      Auth.refreshNotificationBell();
+    },
+
+    async refreshNotificationBell() {
+      const bell = document.getElementById("nav-bell");
+      if (!bell || !Api.getToken()) return;
+      const result = await Api.getUnreadCount();
+      if (result.ok) {
+        const badge = document.getElementById("nav-bell-badge");
+        if (badge) {
+          const count = result.data.count;
+          badge.textContent = count > 9 ? "9+" : count > 0 ? count : "";
+          badge.style.display = count > 0 ? "flex" : "none";
+        }
+      }
     },
   };
 })();

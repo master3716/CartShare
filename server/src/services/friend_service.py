@@ -23,9 +23,11 @@ class FriendService:
         self,
         user_repo: UserRepository,
         purchase_repo: PurchaseRepository,
+        notification_service=None,
     ):
         self._user_repo = user_repo
         self._purchase_repo = purchase_repo
+        self._notification_service = notification_service
 
     # ------------------------------------------------------------------
     # Friend requests
@@ -63,6 +65,15 @@ class FriendService:
         self._user_repo.save(sender)
         self._user_repo.save(target)
 
+        if self._notification_service:
+            self._notification_service.create_notification(
+                recipient_id=target.id,
+                notif_type="friend_request",
+                from_user_id=sender_id,
+                from_username=sender.username,
+                from_avatar_url=sender.avatar_url,
+            )
+
     def accept_request(self, user_id: str, requester_id: str) -> None:
         """
         Accept a pending friend request.
@@ -88,6 +99,15 @@ class FriendService:
 
         self._user_repo.save(user)
         self._user_repo.save(requester)
+
+        if self._notification_service:
+            self._notification_service.create_notification(
+                recipient_id=requester_id,
+                notif_type="friend_accepted",
+                from_user_id=user_id,
+                from_username=user.username,
+                from_avatar_url=user.avatar_url,
+            )
 
     def reject_request(self, user_id: str, requester_id: str) -> None:
         """

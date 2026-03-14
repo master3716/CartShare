@@ -20,6 +20,7 @@ def create_purchase_blueprint(
     purchase_service: PurchaseService,
     user_service: UserService,
     user_repo,
+    notification_service=None,
 ) -> Blueprint:
     bp = Blueprint("purchases", __name__)
     auth = require_auth(user_repo)
@@ -156,6 +157,16 @@ def create_purchase_blueprint(
     def mark_also_buying(purchase_id):
         try:
             purchase = purchase_service.mark_also_buying(purchase_id, g.current_user.id)
+            if notification_service and purchase.user_id != g.current_user.id:
+                notification_service.create_notification(
+                    recipient_id=purchase.user_id,
+                    notif_type="me_too",
+                    from_user_id=g.current_user.id,
+                    from_username=g.current_user.username,
+                    from_avatar_url=g.current_user.avatar_url,
+                    purchase_id=purchase_id,
+                    item_name=purchase.item_name,
+                )
             return jsonify(purchase.to_dict()), 200
         except ValueError as exc:
             return jsonify({"error": str(exc)}), 400

@@ -262,6 +262,41 @@ const PLATFORM_EXTRACTORS = [
       return { item_name: itemName, price, currency, image_url: imageUrl, product_url: window.location.href, platform: this.platform };
     },
   },
+
+  // ----------------------------------------------------------------
+  // Etsy extractor
+  // ----------------------------------------------------------------
+  {
+    platform: EXTENSION_CONSTANTS.PLATFORM_ETSY,
+    matches(url) {
+      return /etsy\.com/.test(url);
+    },
+    extract() {
+      // Etsy uses og: and product: meta tags reliably across page redesigns.
+      const metaTitle = document.querySelector('meta[property="og:title"]');
+      const metaImage = document.querySelector('meta[property="og:image"]');
+      const metaPrice = document.querySelector('meta[property="product:price:amount"]');
+      const metaCurrency = document.querySelector('meta[property="product:price:currency"]');
+
+      const itemName = (metaTitle && metaTitle.content)
+        ? metaTitle.content.trim()
+        : getText(['h1[data-buy-box-listing-title]', 'h1.wt-text-body-03', 'h1']);
+
+      const price = (metaPrice && metaPrice.content)
+        ? metaPrice.content.trim()
+        : getText(['[data-selector="price-only"] .currency-value', '.wt-text-title-03', '[class*="price"]']);
+
+      const currency = (metaCurrency && metaCurrency.content)
+        ? metaCurrency.content.trim()
+        : (() => { const m = price.match(/^([^0-9]+)/); return m ? m[1].trim() : ""; })();
+
+      const imageUrl = (metaImage && metaImage.content)
+        ? metaImage.content.trim()
+        : getImageSrc(['[data-carousel-first-image] img', '.carousel-image img', 'img[data-src-zoom-image]']);
+
+      return { item_name: itemName, price, currency, image_url: imageUrl, product_url: window.location.href, platform: this.platform };
+    },
+  },
 ];
 
 // ------------------------------------------------------------------

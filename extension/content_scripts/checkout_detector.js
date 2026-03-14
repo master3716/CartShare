@@ -96,6 +96,13 @@ const CHECKOUT_DETECTORS = [
     isConfirmationPage(url) { return /temu\.com\/order-success/.test(url) || /temu\.com\/bgn\/order/.test(url); },
     matches(url) { return /temu\.com/.test(url); },
   },
+
+  {
+    platform: EXTENSION_CONSTANTS.PLATFORM_ETSY,
+    isCheckoutPage(url) { return /etsy\.com\/buy\//.test(url) || /etsy\.com\/checkout/.test(url); },
+    isConfirmationPage(url) { return /etsy\.com\/your\/purchases/.test(url) || /etsy\.com\/purchased/.test(url); },
+    matches(url) { return /etsy\.com/.test(url); },
+  },
 ];
 
 // ------------------------------------------------------------------

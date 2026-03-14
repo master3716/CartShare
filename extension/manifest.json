@@ -3,8 +3,8 @@
 
   "manifest_version": 3,
   "name": "ShoppyCat",
-  "version": "1.2.0",
-  "description": "Save items from Amazon, AliExpress, Temu, and SHEIN to your ShoppyCat list, and see what your friends are buying.",
+  "version": "1.3.0",
+  "description": "Save items from Amazon, AliExpress, Temu, SHEIN, and Etsy to your ShoppyCat list, and see what your friends are buying.",
 
   "permissions": [
     "storage",
@@ -24,6 +24,7 @@
     "https://www.shein.com/*",
     "https://us.shein.com/*",
     "https://www.temu.com/*",
+    "https://www.etsy.com/*",
     "https://www.shoppycat.org/*"
   ],
 
@@ -47,7 +48,8 @@
         "https://*.aliexpress.us/*",
         "https://www.shein.com/*",
         "https://us.shein.com/*",
-        "https://www.temu.com/*"
+        "https://www.temu.com/*",
+        "https://www.etsy.com/*"
       ],
       "js": [
         "shared/constants.js",
