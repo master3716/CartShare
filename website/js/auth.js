@@ -133,6 +133,17 @@ const Auth = (() => {
 })();
 
 // ------------------------------------------------------------------
+// Server keep-alive (Render free tier spins down after ~15 min idle)
+// Ping /api/health immediately on page load so the server starts waking
+// up before the user does anything, then repeat every 14 minutes.
+// ------------------------------------------------------------------
+(function keepServerAlive() {
+  const ping = () => fetch(API_BASE_URL.replace("/api", "") + "/api/health").catch(() => {});
+  ping();
+  setInterval(ping, 14 * 60 * 1000);
+})();
+
+// ------------------------------------------------------------------
 // Global toast notification (available on all pages)
 // ------------------------------------------------------------------
 function showToast(message, type = "error") {
