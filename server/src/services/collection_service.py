@@ -37,6 +37,7 @@ class CollectionService:
         d = collection.to_dict()
         owner = self._user_repo.find_by_id(collection.owner_id)
         d["owner_username"] = owner.username if owner else ""
+        d["owner_avatar_url"] = owner.avatar_url if owner else ""
         # Enrich member info
         members = []
         for mid in collection.member_ids:
@@ -44,7 +45,7 @@ class CollectionService:
             if u:
                 members.append({"id": u.id, "username": u.username, "avatar_url": u.avatar_url})
         d["members"] = members
-        # Enrich items with full purchase data
+        # Enrich approved items with full purchase data
         enriched_items = []
         for item in collection.items:
             purchase = self._purchase_repo.find_by_id(item["purchase_id"])
@@ -58,6 +59,21 @@ class CollectionService:
                     "purchase": purchase.to_dict(),
                 })
         d["enriched_items"] = enriched_items
+        # Enrich pending items (only visible to the owner)
+        enriched_pending = []
+        if collection.owner_id == user_id:
+            for item in collection.pending_items:
+                purchase = self._purchase_repo.find_by_id(item["purchase_id"])
+                if purchase:
+                    adder = self._user_repo.find_by_id(item["added_by_user_id"])
+                    enriched_pending.append({
+                        "purchase_id": item["purchase_id"],
+                        "added_by_user_id": item["added_by_user_id"],
+                        "added_by_username": adder.username if adder else "",
+                        "added_at": item["added_at"],
+                        "purchase": purchase.to_dict(),
+                    })
+        d["enriched_pending_items"] = enriched_pending
         return d
 
     def invite_member(self, collection_id: str, owner_id: str, username: str) -> None:
@@ -98,7 +114,8 @@ class CollectionService:
         collection.member_ids.remove(member_id)
         self._repo.save(collection)
 
-    def add_item(self, collection_id: str, user_id: str, purchase_id: str) -> None:
+    def add_item(self, collection_id: str, user_id: str, purchase_id: str) -> dict:
+        """Returns {"pending": True} if the item needs owner approval, else {"pending": False}."""
         collection = self._repo.find_by_id(collection_id)
         if not collection:
             raise ValueError("Collection not found.")
@@ -109,12 +126,54 @@ class CollectionService:
             raise ValueError("Purchase not found.")
         if any(item["purchase_id"] == purchase_id for item in collection.items):
             raise ValueError("This item is already in the collection.")
-        collection.items.append({
+        if any(item["purchase_id"] == purchase_id for item in collection.pending_items):
+            raise ValueError("This item is already pending approval.")
+        entry = {
             "purchase_id": purchase_id,
             "added_by_user_id": user_id,
             "added_at": datetime.now(timezone.utc).isoformat(),
-        })
+        }
+        needs_approval = collection.requires_approval and collection.owner_id != user_id
+        if needs_approval:
+            collection.pending_items.append(entry)
+        else:
+            collection.items.append(entry)
         self._repo.save(collection)
+        return {"pending": needs_approval}
+
+    def approve_item(self, collection_id: str, owner_id: str, purchase_id: str) -> None:
+        collection = self._repo.find_by_id(collection_id)
+        if not collection:
+            raise ValueError("Collection not found.")
+        if collection.owner_id != owner_id:
+            raise ValueError("Only the owner can approve items.")
+        item = next((i for i in collection.pending_items if i["purchase_id"] == purchase_id), None)
+        if not item:
+            raise ValueError("Item not in pending list.")
+        collection.pending_items = [i for i in collection.pending_items if i["purchase_id"] != purchase_id]
+        collection.items.append(item)
+        self._repo.save(collection)
+
+    def reject_item(self, collection_id: str, owner_id: str, purchase_id: str) -> None:
+        collection = self._repo.find_by_id(collection_id)
+        if not collection:
+            raise ValueError("Collection not found.")
+        if collection.owner_id != owner_id:
+            raise ValueError("Only the owner can reject items.")
+        if not any(i["purchase_id"] == purchase_id for i in collection.pending_items):
+            raise ValueError("Item not in pending list.")
+        collection.pending_items = [i for i in collection.pending_items if i["purchase_id"] != purchase_id]
+        self._repo.save(collection)
+
+    def toggle_requires_approval(self, collection_id: str, owner_id: str) -> bool:
+        collection = self._repo.find_by_id(collection_id)
+        if not collection:
+            raise ValueError("Collection not found.")
+        if collection.owner_id != owner_id:
+            raise ValueError("Only the owner can change this setting.")
+        collection.requires_approval = not collection.requires_approval
+        self._repo.save(collection)
+        return collection.requires_approval
 
     def remove_item(self, collection_id: str, user_id: str, purchase_id: str) -> None:
         collection = self._repo.find_by_id(collection_id)

@@ -198,27 +198,44 @@ const collabMembersStrip = document.getElementById("collab-members-strip");
 const collabItemsGrid    = document.getElementById("collab-items-grid");
 const collabItemsEmpty   = document.getElementById("collab-items-empty");
 const collabItemsSpinner = document.getElementById("collab-items-spinner");
+const pendingSection     = document.getElementById("pending-section");
+const pendingGrid        = document.getElementById("pending-grid");
 const inviteSection      = document.getElementById("invite-section");
+const approvalToggleSection = document.getElementById("approval-toggle-section");
+const approvalToggle     = document.getElementById("approval-toggle");
 const btnLeave           = document.getElementById("btn-leave");
 const btnDeleteColl      = document.getElementById("btn-delete-collection");
 
 let currentCollabId = null;
 
-function memberAvatarHtml(username, avatarUrl, label) {
-  const avatar = avatarUrl
-    ? `<img src="${escapeHtml(avatarUrl)}" class="collab-member-avatar" />`
-    : `<div class="collab-member-avatar collab-member-avatar-initial">${escapeHtml((username || "?")[0]).toUpperCase()}</div>`;
+function buildMemberEl(username, avatarUrl, label, onRemove) {
+  const wrap = document.createElement("div");
+  wrap.className = "collab-member";
 
-  return `
-    <div class="collab-member">
-      ${avatar}
-      <div class="collab-member-name">@${escapeHtml(username)}</div>
-      ${label ? `<div class="collab-member-label">${escapeHtml(label)}</div>` : ""}
-    </div>
-  `;
+  const avatarWrap = document.createElement("div");
+  avatarWrap.style.position = "relative";
+
+  const avatar = avatarUrl
+    ? Object.assign(document.createElement("img"), { src: avatarUrl, className: "collab-member-avatar" })
+    : Object.assign(document.createElement("div"), { className: "collab-member-avatar collab-member-avatar-initial", textContent: (username || "?")[0].toUpperCase() });
+  avatarWrap.appendChild(avatar);
+
+  if (onRemove) {
+    const removeBtn = document.createElement("button");
+    removeBtn.textContent = "✕";
+    removeBtn.title = "Remove member";
+    removeBtn.style.cssText = "position:absolute;top:-3px;right:-3px;background:#e53935;color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;";
+    removeBtn.addEventListener("click", onRemove);
+    avatarWrap.appendChild(removeBtn);
+  }
+
+  wrap.appendChild(avatarWrap);
+  wrap.innerHTML += `<div class="collab-member-name">@${escapeHtml(username)}</div>`;
+  if (label) wrap.innerHTML += `<div class="collab-member-label">${escapeHtml(label)}</div>`;
+  return wrap;
 }
 
-function buildCollabItemCard(item) {
+function buildCollabItemCard(item, isPending) {
   const p = item.purchase;
   const card = document.createElement("div");
   card.className = "purchase-card";
@@ -228,7 +245,7 @@ function buildCollabItemCard(item) {
     ? `<img class="purchase-card-img" src="${escapeHtml(p.image_url)}" alt="" />`
     : `<div class="purchase-card-img-placeholder">🛍️</div>`;
 
-  const canRemove = item.added_by_user_id === currentUser.id;
+  const canRemove = !isPending && item.added_by_user_id === currentUser.id;
 
   card.innerHTML = `
     ${imgHtml}
@@ -240,9 +257,14 @@ function buildCollabItemCard(item) {
       </div>
       <div style="font-size:11px;color:#999;margin-top:4px;">by @${escapeHtml(item.added_by_username)}</div>
     </div>
-    <div class="purchase-card-actions" style="justify-content:space-between;">
+    <div class="purchase-card-actions" style="flex-direction:column;gap:6px;">
       <a href="${escapeHtml(p.product_url)}" target="_blank" rel="noopener" class="btn btn-primary btn-sm">🛒 Buy Now</a>
-      ${canRemove ? `<button class="btn btn-danger btn-sm btn-remove-collab-item" data-purchase-id="${escapeHtml(item.purchase_id)}">Remove</button>` : ""}
+      ${isPending
+        ? `<button class="btn btn-primary btn-sm btn-approve-item" data-purchase-id="${escapeHtml(item.purchase_id)}">✅ Approve</button>
+           <button class="btn btn-danger btn-sm btn-reject-item" data-purchase-id="${escapeHtml(item.purchase_id)}">✕ Reject</button>`
+        : canRemove
+          ? `<button class="btn btn-danger btn-sm btn-remove-collab-item" data-purchase-id="${escapeHtml(item.purchase_id)}">Remove</button>`
+          : ""}
     </div>
   `;
 
@@ -255,7 +277,9 @@ async function openCollabCollection(collectionId) {
 
   collabMembersStrip.innerHTML = "";
   collabItemsGrid.innerHTML = "";
+  pendingGrid.innerHTML = "";
   collabItemsEmpty.classList.add("hidden");
+  pendingSection.classList.add("hidden");
   collabItemsSpinner.classList.remove("hidden");
 
   const result = await Api.getCollection(collectionId);
@@ -272,55 +296,45 @@ async function openCollabCollection(collectionId) {
 
   collabName.textContent = c.name;
 
-  // Build member avatar strip — owner first, then members
-  const ownerUser = { username: c.owner_username, avatar_url: null };
-  // Try to find owner in members list or use what we have
-  collabMembersStrip.innerHTML = memberAvatarHtml(c.owner_username, null, "Owner");
-
+  // Member avatar strip — owner first, then members
+  collabMembersStrip.appendChild(
+    buildMemberEl(c.owner_username, c.owner_avatar_url || null, "Owner", null)
+  );
   (c.members || []).forEach(m => {
-    const memberEl = document.createElement("div");
-    memberEl.innerHTML = memberAvatarHtml(m.username, m.avatar_url, isOwner ? null : null);
-
-    if (isOwner) {
-      // Add remove button overlay
-      const avatar = memberEl.firstElementChild;
-      const removeBtn = document.createElement("button");
-      removeBtn.textContent = "✕";
-      removeBtn.title = "Remove member";
-      removeBtn.style.cssText = "position:absolute;top:-4px;right:-4px;background:#e53935;color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;";
-      avatar.style.position = "relative";
-      avatar.querySelector(".collab-member-avatar, img").style.cssText += "";
-      // wrap avatar in relative div
-      const wrap = document.createElement("div");
-      wrap.style.position = "relative";
-      const avatarEl = avatar.querySelector(".collab-member-avatar") || avatar.querySelector("img");
-      avatarEl.parentNode.insertBefore(wrap, avatarEl);
-      wrap.appendChild(avatarEl);
-      wrap.appendChild(removeBtn);
-
-      removeBtn.addEventListener("click", async () => {
-        const res = await Api.removeCollectionMember(collectionId, m.id);
-        if (res.ok) { openCollabCollection(collectionId); }
-        else { showToast(res.data?.error || "Failed to remove member."); }
-      });
-    }
-
-    collabMembersStrip.appendChild(memberEl.firstElementChild);
+    const onRemove = isOwner ? async () => {
+      const res = await Api.removeCollectionMember(collectionId, m.id);
+      if (res.ok) openCollabCollection(collectionId);
+      else showToast(res.data?.error || "Failed to remove member.");
+    } : null;
+    collabMembersStrip.appendChild(buildMemberEl(m.username, m.avatar_url, null, onRemove));
   });
 
-  // Controls
+  // Controls visibility
   inviteSection.classList.toggle("hidden", !isOwner);
+  approvalToggleSection.classList.toggle("hidden", !isOwner);
   btnLeave.classList.toggle("hidden", isOwner);
   btnDeleteColl.classList.toggle("hidden", !isOwner);
 
-  // Items
+  // Approval toggle state
+  if (isOwner) {
+    approvalToggle.checked = !!c.requires_approval;
+    approvalToggle.dataset.collabId = collectionId;
+  }
+
+  // Approved items
   if (!c.enriched_items || c.enriched_items.length === 0) {
     collabItemsEmpty.classList.remove("hidden");
   } else {
-    c.enriched_items.forEach(item => collabItemsGrid.appendChild(buildCollabItemCard(item)));
+    c.enriched_items.forEach(item => collabItemsGrid.appendChild(buildCollabItemCard(item, false)));
   }
 
-  // Remove item handler
+  // Pending items (owner only)
+  if (isOwner && c.enriched_pending_items && c.enriched_pending_items.length > 0) {
+    pendingSection.classList.remove("hidden");
+    c.enriched_pending_items.forEach(item => pendingGrid.appendChild(buildCollabItemCard(item, true)));
+  }
+
+  // Remove approved item
   collabItemsGrid.addEventListener("click", async (e) => {
     const btn = e.target.closest(".btn-remove-collab-item");
     if (!btn) return;
@@ -333,12 +347,41 @@ async function openCollabCollection(collectionId) {
       showToast(res.data?.error || "Failed to remove item.");
     }
   }, { once: true });
+
+  // Approve / reject pending items
+  pendingGrid.addEventListener("click", async (e) => {
+    const approveBtn = e.target.closest(".btn-approve-item");
+    const rejectBtn  = e.target.closest(".btn-reject-item");
+    if (!approveBtn && !rejectBtn) return;
+
+    const purchaseId = (approveBtn || rejectBtn).dataset.purchaseId;
+    let res;
+    if (approveBtn) {
+      res = await Api.approveCollectionItem(collectionId, purchaseId);
+    } else {
+      res = await Api.rejectCollectionItem(collectionId, purchaseId);
+    }
+    if (res.ok) {
+      openCollabCollection(collectionId); // refresh
+    } else {
+      showToast(res.data?.error || "Failed.");
+    }
+  }, { once: true });
 }
 
 document.getElementById("btn-back-collab").addEventListener("click", () => {
   currentCollabId = null;
   showView(mainView);
   loadCollections();
+});
+
+// Approval toggle
+approvalToggle.addEventListener("change", async () => {
+  const res = await Api.toggleCollectionApproval(currentCollabId);
+  if (!res.ok) {
+    approvalToggle.checked = !approvalToggle.checked; // revert
+    showToast(res.data?.error || "Failed to update setting.");
+  }
 });
 
 // Invite member
@@ -354,22 +397,6 @@ document.getElementById("invite-form").addEventListener("submit", async (e) => {
     openCollabCollection(currentCollabId);
   } else {
     showMsg(inviteMsg, res.data?.error || "Failed to invite.");
-  }
-});
-
-// Add item
-document.getElementById("add-item-form").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const purchaseId = document.getElementById("add-item-purchase-id").value.trim();
-  const addMsg = document.getElementById("add-item-msg");
-  if (!purchaseId) return;
-  const res = await Api.addCollectionItem(currentCollabId, purchaseId);
-  if (res.ok) {
-    showMsg(addMsg, "Item added!", "success");
-    document.getElementById("add-item-purchase-id").value = "";
-    openCollabCollection(currentCollabId);
-  } else {
-    showMsg(addMsg, res.data?.error || "Failed to add item.");
   }
 });
 

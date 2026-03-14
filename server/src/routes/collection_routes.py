@@ -74,8 +74,9 @@ def create_collection_blueprint(collection_service: CollectionService, user_repo
     def add_item(collection_id):
         data = request.get_json(silent=True) or {}
         try:
-            collection_service.add_item(collection_id, g.current_user.id, data.get("purchase_id", ""))
-            return jsonify({"message": "Item added."}), 200
+            result = collection_service.add_item(collection_id, g.current_user.id, data.get("purchase_id", ""))
+            msg = "Item submitted for owner approval." if result["pending"] else "Item added."
+            return jsonify({"message": msg, "pending": result["pending"]}), 200
         except ValueError as exc:
             return jsonify({"error": str(exc)}), 400
 
@@ -85,6 +86,33 @@ def create_collection_blueprint(collection_service: CollectionService, user_repo
         try:
             collection_service.remove_item(collection_id, g.current_user.id, purchase_id)
             return jsonify({"message": "Item removed."}), 200
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 400
+
+    @bp.route("/<collection_id>/approval", methods=["PATCH"])
+    @auth
+    def toggle_approval(collection_id):
+        try:
+            now_required = collection_service.toggle_requires_approval(collection_id, g.current_user.id)
+            return jsonify({"requires_approval": now_required}), 200
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 400
+
+    @bp.route("/<collection_id>/pending/<purchase_id>/approve", methods=["POST"])
+    @auth
+    def approve_item(collection_id, purchase_id):
+        try:
+            collection_service.approve_item(collection_id, g.current_user.id, purchase_id)
+            return jsonify({"message": "Item approved."}), 200
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 400
+
+    @bp.route("/<collection_id>/pending/<purchase_id>", methods=["DELETE"])
+    @auth
+    def reject_item(collection_id, purchase_id):
+        try:
+            collection_service.reject_item(collection_id, g.current_user.id, purchase_id)
+            return jsonify({"message": "Item rejected."}), 200
         except ValueError as exc:
             return jsonify({"error": str(exc)}), 400
 

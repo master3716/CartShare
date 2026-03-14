@@ -292,5 +292,17 @@ const Api = (() => {
     async removeCollectionItem(collectionId, purchaseId) {
       return request(`/collections/${collectionId}/items/${purchaseId}`, { method: "DELETE" }, true);
     },
+
+    async toggleCollectionApproval(collectionId) {
+      return request(`/collections/${collectionId}/approval`, { method: "PATCH" }, true);
+    },
+
+    async approveCollectionItem(collectionId, purchaseId) {
+      return request(`/collections/${collectionId}/pending/${purchaseId}/approve`, { method: "POST" }, true);
+    },
+
+    async rejectCollectionItem(collectionId, purchaseId) {
+      return request(`/collections/${collectionId}/pending/${purchaseId}`, { method: "DELETE" }, true);
+    },
   };
 })();
