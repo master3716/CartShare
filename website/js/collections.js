@@ -207,6 +207,14 @@ const btnLeave           = document.getElementById("btn-leave");
 const btnDeleteColl      = document.getElementById("btn-delete-collection");
 
 let currentCollabId = null;
+let collabItemsAbort = null;
+let pendingAbort = null;
+let collabPollInterval = null;
+// Last server-side counts — used by poll to detect changes without being
+// confused by optimistic DOM mutations
+let lastItemCount = -1;
+let lastPendingCount = -1;
+let lastMemberCount = -1;
 
 function buildMemberEl(username, avatarUrl, label, onRemove) {
   const wrap = document.createElement("div");
@@ -334,26 +342,41 @@ async function openCollabCollection(collectionId) {
     c.enriched_pending_items.forEach(item => pendingGrid.appendChild(buildCollabItemCard(item, true)));
   }
 
-  // Remove approved item
+  lastItemCount    = (c.enriched_items || []).length;
+  lastPendingCount = (isOwner && c.enriched_pending_items) ? c.enriched_pending_items.length : 0;
+  lastMemberCount  = (c.members || []).length;
+
+  attachCollabItemsHandler(collectionId);
+  attachPendingHandler(collectionId);
+  startCollabPolling(collectionId);
+}
+
+function attachCollabItemsHandler(collectionId) {
+  if (collabItemsAbort) collabItemsAbort.abort();
+  collabItemsAbort = new AbortController();
   collabItemsGrid.addEventListener("click", async (e) => {
     const btn = e.target.closest(".btn-remove-collab-item");
     if (!btn) return;
     const purchaseId = btn.dataset.purchaseId;
+    const card = btn.closest(".purchase-card");
+    card.remove(); // optimistic
+    lastItemCount = Math.max(0, lastItemCount - 1);
+    if (!collabItemsGrid.children.length) collabItemsEmpty.classList.remove("hidden");
     const res = await Api.removeCollectionItem(collectionId, purchaseId);
-    if (res.ok) {
-      btn.closest(".purchase-card").remove();
-      if (!collabItemsGrid.children.length) collabItemsEmpty.classList.remove("hidden");
-    } else {
+    if (!res.ok) {
       showToast(res.data?.error || "Failed to remove item.");
+      openCollabCollection(collectionId);
     }
-  }, { once: true });
+  }, { signal: collabItemsAbort.signal });
+}
 
-  // Approve / reject pending items
+function attachPendingHandler(collectionId) {
+  if (pendingAbort) pendingAbort.abort();
+  pendingAbort = new AbortController();
   pendingGrid.addEventListener("click", async (e) => {
     const approveBtn = e.target.closest(".btn-approve-item");
     const rejectBtn  = e.target.closest(".btn-reject-item");
     if (!approveBtn && !rejectBtn) return;
-
     const purchaseId = (approveBtn || rejectBtn).dataset.purchaseId;
     let res;
     if (approveBtn) {
@@ -362,14 +385,82 @@ async function openCollabCollection(collectionId) {
       res = await Api.rejectCollectionItem(collectionId, purchaseId);
     }
     if (res.ok) {
-      openCollabCollection(collectionId); // refresh
+      openCollabCollection(collectionId);
     } else {
       showToast(res.data?.error || "Failed.");
     }
-  }, { once: true });
+  }, { signal: pendingAbort.signal });
+}
+
+function stopCollabPolling() {
+  if (collabPollInterval) {
+    clearInterval(collabPollInterval);
+    collabPollInterval = null;
+  }
+}
+
+function startCollabPolling(collectionId) {
+  stopCollabPolling();
+  collabPollInterval = setInterval(() => pollCollab(collectionId), 5000);
+}
+
+async function pollCollab(collectionId) {
+  if (collectionId !== currentCollabId) return stopCollabPolling();
+  const result = await Api.getCollection(collectionId);
+  if (!result.ok) return;
+
+  const c = result.data;
+  const isOwner = c.owner_id === currentUser.id;
+
+  // Members strip
+  const newMemberCount = (c.members || []).length;
+  if (newMemberCount !== lastMemberCount) {
+    lastMemberCount = newMemberCount;
+    collabMembersStrip.innerHTML = "";
+    collabMembersStrip.appendChild(
+      buildMemberEl(c.owner_username, c.owner_avatar_url || null, "Owner", null)
+    );
+    (c.members || []).forEach(m => {
+      const onRemove = isOwner ? async () => {
+        const res = await Api.removeCollectionMember(collectionId, m.id);
+        if (res.ok) openCollabCollection(collectionId);
+        else showToast(res.data?.error || "Failed to remove member.");
+      } : null;
+      collabMembersStrip.appendChild(buildMemberEl(m.username, m.avatar_url, null, onRemove));
+    });
+  }
+
+  // Approved items
+  const newItemCount = (c.enriched_items || []).length;
+  if (newItemCount !== lastItemCount) {
+    lastItemCount = newItemCount;
+    collabItemsGrid.innerHTML = "";
+    if (newItemCount === 0) {
+      collabItemsEmpty.classList.remove("hidden");
+    } else {
+      collabItemsEmpty.classList.add("hidden");
+      c.enriched_items.forEach(item => collabItemsGrid.appendChild(buildCollabItemCard(item, false)));
+    }
+    attachCollabItemsHandler(collectionId);
+  }
+
+  // Pending items (owner only)
+  const newPendingCount = isOwner ? (c.enriched_pending_items || []).length : 0;
+  if (newPendingCount !== lastPendingCount) {
+    lastPendingCount = newPendingCount;
+    pendingGrid.innerHTML = "";
+    if (newPendingCount > 0) {
+      pendingSection.classList.remove("hidden");
+      c.enriched_pending_items.forEach(item => pendingGrid.appendChild(buildCollabItemCard(item, true)));
+    } else {
+      pendingSection.classList.add("hidden");
+    }
+    attachPendingHandler(collectionId);
+  }
 }
 
 document.getElementById("btn-back-collab").addEventListener("click", () => {
+  stopCollabPolling();
   currentCollabId = null;
   showView(mainView);
   loadCollections();
