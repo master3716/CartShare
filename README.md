@@ -8,12 +8,14 @@ ShoppyCat lets you save items you buy from online stores, share them with friend
 
 ## Core Features
 
-- **Browser Extension** — Detects products on Amazon, AliExpress, Temu, and SHEIN automatically. One click saves an item to your list. Also captures order confirmation pages as purchases.
+- **Browser Extension** — Detects products on Amazon, AliExpress, Temu, SHEIN, and Etsy automatically. One click saves an item to your list. Also captures order confirmation pages as purchases.
 - **Website Dashboard** — View and manage your saved items, toggle each one public or private, and see your friends' purchases.
 - **Friend Feed** — A social feed of what friends have recently bought. Click an item to track engagement or shop the same product.
 - **"Me Too!" Button** — Signal that you're also buying the same item. See how many friends are buying it and click the counter to see who.
 - **Item Comments** — Leave comments on any friend's public purchase directly in the feed.
 - **Collections** — Save a friend's item into a personal named category (e.g. "Tech", "Gift Ideas"). Viewable in your dashboard.
+- **Collaborative Collections** — Create shared boards where you and invited friends can all add items together. Any member can contribute.
+- **Notifications Center** — In-app notification feed for friend requests, accepted requests, comments on your items, and "Me Too!" marks. Bell icon with unread badge in the nav.
 - **Public Profiles** — Every user has a shareable profile URL showing their public purchases.
 - **Friend System** — Send, accept, or reject friend requests. View a combined feed of all friends' activity.
 - **Password Encryption** — All passwords are hashed with bcrypt at registration. Existing accounts are migrated automatically on server start.
@@ -31,7 +33,7 @@ ShoppyCat lets you save items you buy from online stores, share them with friend
 
 ## Supported Stores
 
-Auto-detects products on: **Amazon**, **AliExpress**, **Temu**, **SHEIN**
+Auto-detects products on: **Amazon**, **AliExpress**, **Temu**, **SHEIN**, **Etsy**
 
 ## Running Locally
 
