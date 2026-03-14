@@ -217,9 +217,12 @@ let lastPendingCount = -1;
 let lastMemberCount = -1;
 // Item data for pending cards, needed to rebuild them on optimistic revert
 const pendingItemsMap = new Map();
-// Suppress polls while an action is in flight to prevent the poll from
-// reverting optimistic DOM updates before the server has processed them
-let actionInFlight = false;
+// Generation counter: increments whenever an action starts. Each poll
+// captures the current generation before its fetch; if the generation
+// changed by the time the fetch returns, the data is stale and discarded.
+// This handles the race where a poll fetch starts before an action,
+// completes after the action finishes, and would otherwise apply old data.
+let pollGeneration = 0;
 
 function buildMemberEl(username, avatarUrl, label, onRemove) {
   const wrap = document.createElement("div");
@@ -371,9 +374,9 @@ function attachCollabItemsHandler(collectionId) {
     card.remove(); // optimistic
     lastItemCount = Math.max(0, lastItemCount - 1);
     if (!collabItemsGrid.children.length) collabItemsEmpty.classList.remove("hidden");
-    actionInFlight = true;
+    pollGeneration++; // invalidate any in-flight poll fetches
     const res = await Api.removeCollectionItem(collectionId, purchaseId);
-    actionInFlight = false;
+    startCollabPolling(collectionId); // restart interval so next poll is 5s fresh
     if (!res.ok) {
       showToast(res.data?.error || "Failed to remove item.");
       openCollabCollection(collectionId);
@@ -409,11 +412,11 @@ function attachPendingHandler(collectionId) {
       attachCollabItemsHandler(collectionId);
     }
 
-    actionInFlight = true;
+    pollGeneration++; // invalidate any in-flight poll fetches
     const res = approveBtn
       ? await Api.approveCollectionItem(collectionId, purchaseId)
       : await Api.rejectCollectionItem(collectionId, purchaseId);
-    actionInFlight = false;
+    startCollabPolling(collectionId); // restart interval so next poll is 5s fresh
 
     if (!res.ok) {
       // Revert
@@ -444,15 +447,16 @@ function stopCollabPolling() {
 
 function startCollabPolling(collectionId) {
   stopCollabPolling();
-  collabPollInterval = setInterval(() => pollCollab(collectionId), 5000);
+  const gen = pollGeneration;
+  collabPollInterval = setInterval(() => pollCollab(collectionId, gen), 5000);
 }
 
-async function pollCollab(collectionId) {
+async function pollCollab(collectionId, gen) {
   if (collectionId !== currentCollabId) return stopCollabPolling();
-  if (actionInFlight) return;
+  if (pollGeneration !== gen) return;
   const result = await Api.getCollection(collectionId);
-  // An action may have started while the fetch was in flight — discard stale data
-  if (actionInFlight) return;
+  // Discard if an action started (or completed) while the fetch was in flight
+  if (pollGeneration !== gen) return;
   if (!result.ok) return;
 
   const c = result.data;
