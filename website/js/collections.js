@@ -217,6 +217,9 @@ let lastPendingCount = -1;
 let lastMemberCount = -1;
 // Item data for pending cards, needed to rebuild them on optimistic revert
 const pendingItemsMap = new Map();
+// Suppress polls while an action is in flight to prevent the poll from
+// reverting optimistic DOM updates before the server has processed them
+let actionInFlight = false;
 
 function buildMemberEl(username, avatarUrl, label, onRemove) {
   const wrap = document.createElement("div");
@@ -368,7 +371,9 @@ function attachCollabItemsHandler(collectionId) {
     card.remove(); // optimistic
     lastItemCount = Math.max(0, lastItemCount - 1);
     if (!collabItemsGrid.children.length) collabItemsEmpty.classList.remove("hidden");
+    actionInFlight = true;
     const res = await Api.removeCollectionItem(collectionId, purchaseId);
+    actionInFlight = false;
     if (!res.ok) {
       showToast(res.data?.error || "Failed to remove item.");
       openCollabCollection(collectionId);
@@ -404,9 +409,11 @@ function attachPendingHandler(collectionId) {
       attachCollabItemsHandler(collectionId);
     }
 
+    actionInFlight = true;
     const res = approveBtn
       ? await Api.approveCollectionItem(collectionId, purchaseId)
       : await Api.rejectCollectionItem(collectionId, purchaseId);
+    actionInFlight = false;
 
     if (!res.ok) {
       // Revert
@@ -442,6 +449,7 @@ function startCollabPolling(collectionId) {
 
 async function pollCollab(collectionId) {
   if (collectionId !== currentCollabId) return stopCollabPolling();
+  if (actionInFlight) return;
   const result = await Api.getCollection(collectionId);
   if (!result.ok) return;
 
