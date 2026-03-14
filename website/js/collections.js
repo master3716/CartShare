@@ -215,6 +215,8 @@ let collabPollInterval = null;
 let lastItemCount = -1;
 let lastPendingCount = -1;
 let lastMemberCount = -1;
+// Item data for pending cards, needed to rebuild them on optimistic revert
+const pendingItemsMap = new Map();
 
 function buildMemberEl(username, avatarUrl, label, onRemove) {
   const wrap = document.createElement("div");
@@ -337,9 +339,13 @@ async function openCollabCollection(collectionId) {
   }
 
   // Pending items (owner only)
+  pendingItemsMap.clear();
   if (isOwner && c.enriched_pending_items && c.enriched_pending_items.length > 0) {
     pendingSection.classList.remove("hidden");
-    c.enriched_pending_items.forEach(item => pendingGrid.appendChild(buildCollabItemCard(item, true, isOwner)));
+    c.enriched_pending_items.forEach(item => {
+      pendingItemsMap.set(item.purchase_id, item);
+      pendingGrid.appendChild(buildCollabItemCard(item, true, isOwner));
+    });
   }
 
   lastItemCount    = (c.enriched_items || []).length;
@@ -377,16 +383,46 @@ function attachPendingHandler(collectionId) {
     const approveBtn = e.target.closest(".btn-approve-item");
     const rejectBtn  = e.target.closest(".btn-reject-item");
     if (!approveBtn && !rejectBtn) return;
+
     const purchaseId = (approveBtn || rejectBtn).dataset.purchaseId;
-    let res;
+    const item = pendingItemsMap.get(purchaseId);
+    const pendingCard = (approveBtn || rejectBtn).closest(".purchase-card");
+
+    // Optimistic: remove from pending immediately
+    pendingCard.remove();
+    pendingItemsMap.delete(purchaseId);
+    lastPendingCount = Math.max(0, lastPendingCount - 1);
+    if (!pendingGrid.children.length) pendingSection.classList.add("hidden");
+
+    let approvedCard = null;
     if (approveBtn) {
-      res = await Api.approveCollectionItem(collectionId, purchaseId);
-    } else {
-      res = await Api.rejectCollectionItem(collectionId, purchaseId);
+      // Optimistic: move to approved items grid immediately
+      approvedCard = buildCollabItemCard(item, false, true);
+      if (!collabItemsGrid.children.length) collabItemsEmpty.classList.add("hidden");
+      collabItemsGrid.appendChild(approvedCard);
+      lastItemCount++;
+      attachCollabItemsHandler(collectionId);
     }
-    if (res.ok) {
-      openCollabCollection(collectionId);
-    } else {
+
+    const res = approveBtn
+      ? await Api.approveCollectionItem(collectionId, purchaseId)
+      : await Api.rejectCollectionItem(collectionId, purchaseId);
+
+    if (!res.ok) {
+      // Revert
+      if (approvedCard) {
+        approvedCard.remove();
+        lastItemCount = Math.max(0, lastItemCount - 1);
+        if (!collabItemsGrid.children.length) collabItemsEmpty.classList.remove("hidden");
+        attachCollabItemsHandler(collectionId);
+      }
+      if (item) {
+        pendingItemsMap.set(purchaseId, item);
+        pendingGrid.appendChild(buildCollabItemCard(item, true, true));
+        lastPendingCount++;
+        pendingSection.classList.remove("hidden");
+        attachPendingHandler(collectionId);
+      }
       showToast(res.data?.error || "Failed.");
     }
   }, { signal: pendingAbort.signal });
@@ -449,9 +485,13 @@ async function pollCollab(collectionId) {
   if (newPendingCount !== lastPendingCount) {
     lastPendingCount = newPendingCount;
     pendingGrid.innerHTML = "";
+    pendingItemsMap.clear();
     if (newPendingCount > 0) {
       pendingSection.classList.remove("hidden");
-      c.enriched_pending_items.forEach(item => pendingGrid.appendChild(buildCollabItemCard(item, true, isOwner)));
+      c.enriched_pending_items.forEach(item => {
+        pendingItemsMap.set(item.purchase_id, item);
+        pendingGrid.appendChild(buildCollabItemCard(item, true, isOwner));
+      });
     } else {
       pendingSection.classList.add("hidden");
     }
