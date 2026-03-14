@@ -1,17 +1,6 @@
 /**
  * website/js/friends.js
- * ----------------------
- * Logic for friends.html.
- *
- * Responsibilities:
- *   - Show accepted friends list with "View Profile" and "Unfriend" buttons.
- *   - Show pending incoming friend requests with Accept/Reject buttons.
- *   - Allow sending a new friend request by username.
  */
-
-// ------------------------------------------------------------------
-// Render helpers
-// ------------------------------------------------------------------
 
 function escapeHtml(str) {
   if (!str) return "";
@@ -24,114 +13,138 @@ function getInitial(username) {
   return (username || "?")[0].toUpperCase();
 }
 
-// ------------------------------------------------------------------
-// Load accepted friends
-// ------------------------------------------------------------------
+// ----------------------------------------------------------------
+// Render helpers
+// ----------------------------------------------------------------
+
+function buildFriendItem(friend) {
+  const item = document.createElement("div");
+  item.className = "friend-item";
+  item.innerHTML = `
+    <div class="friend-info">
+      ${friend.avatar_url
+        ? `<img src="${friend.avatar_url}" class="friend-avatar friend-avatar-img" />`
+        : `<div class="friend-avatar">${escapeHtml(getInitial(friend.username))}</div>`
+      }
+      <div>
+        <div class="friend-username">@${escapeHtml(friend.username)}</div>
+      </div>
+    </div>
+    <div class="friend-actions">
+      <a href="profile.html?user=${encodeURIComponent(friend.username)}"
+         class="btn btn-ghost btn-sm" target="_blank">View List</a>
+      <button class="btn btn-danger btn-sm btn-unfriend"
+              data-id="${friend.id}" data-username="${escapeHtml(friend.username)}">
+        Unfriend
+      </button>
+    </div>
+  `;
+  return item;
+}
+
+function buildRequestItem(user) {
+  const item = document.createElement("div");
+  item.className = "friend-item";
+  item.innerHTML = `
+    <div class="friend-info">
+      ${user.avatar_url
+        ? `<img src="${user.avatar_url}" class="friend-avatar friend-avatar-img" />`
+        : `<div class="friend-avatar">${escapeHtml(getInitial(user.username))}</div>`
+      }
+      <div class="friend-username">@${escapeHtml(user.username)}</div>
+    </div>
+    <div class="friend-actions">
+      <button class="btn btn-primary btn-sm btn-accept" data-id="${user.id}">Accept</button>
+      <button class="btn btn-ghost btn-sm btn-reject" data-id="${user.id}">Decline</button>
+    </div>
+  `;
+  return item;
+}
+
+function renderFriends(list, empty, friends) {
+  list.innerHTML = "";
+  if (!friends.length) { empty.classList.remove("hidden"); return; }
+  empty.classList.add("hidden");
+  friends.forEach(f => list.appendChild(buildFriendItem(f)));
+  list.querySelectorAll(".btn-unfriend").forEach(btn =>
+    btn.addEventListener("click", () => handleUnfriend(btn.dataset.id, btn.dataset.username)));
+}
+
+function renderRequests(list, empty, requesters) {
+  list.innerHTML = "";
+  if (!requesters.length) { empty.classList.remove("hidden"); return; }
+  empty.classList.add("hidden");
+  requesters.forEach(u => list.appendChild(buildRequestItem(u)));
+  list.querySelectorAll(".btn-accept").forEach(btn =>
+    btn.addEventListener("click", () => handleAccept(btn.dataset.id)));
+  list.querySelectorAll(".btn-reject").forEach(btn =>
+    btn.addEventListener("click", () => handleReject(btn.dataset.id)));
+}
+
+// ----------------------------------------------------------------
+// Load functions — stale-while-revalidate
+// ----------------------------------------------------------------
+
+let _friendsFirstLoad = true;
+let _pendingFirstLoad = true;
 
 async function loadFriends() {
-  const list = document.getElementById("friends-list");
+  const list  = document.getElementById("friends-list");
   const empty = document.getElementById("friends-empty");
-  list.innerHTML = "<span class='spinner-sm'></span> Loading…";
+
+  if (_friendsFirstLoad) {
+    _friendsFirstLoad = false;
+    const cached = AppCache.get("friends");
+    if (cached) {
+      renderFriends(list, empty, cached);
+    } else {
+      list.innerHTML = "<span class='spinner-sm'></span> Loading…";
+    }
+  } else {
+    list.innerHTML = "<span class='spinner-sm'></span> Loading…";
+  }
 
   const result = await Api.getFriends();
-  list.innerHTML = "";
-
   if (!result.ok) {
     list.innerHTML = `<p class="msg msg-error">${result.data?.error || "Failed to load."}</p>`;
     return;
   }
 
   const friends = result.data;
-  if (!friends.length) {
-    empty.classList.remove("hidden");
-    return;
-  }
-  empty.classList.add("hidden");
-
-  friends.forEach((friend) => {
-    const item = document.createElement("div");
-    item.className = "friend-item";
-    item.innerHTML = `
-      <div class="friend-info">
-        ${friend.avatar_url
-          ? `<img src="${friend.avatar_url}" class="friend-avatar friend-avatar-img" />`
-          : `<div class="friend-avatar">${escapeHtml(getInitial(friend.username))}</div>`
-        }
-        <div>
-          <div class="friend-username">@${escapeHtml(friend.username)}</div>
-        </div>
-      </div>
-      <div class="friend-actions">
-        <a href="profile.html?user=${encodeURIComponent(friend.username)}"
-           class="btn btn-ghost btn-sm" target="_blank">View List</a>
-        <button class="btn btn-danger btn-sm btn-unfriend"
-                data-id="${friend.id}" data-username="${escapeHtml(friend.username)}">
-          Unfriend
-        </button>
-      </div>
-    `;
-    list.appendChild(item);
-  });
-
-  list.querySelectorAll(".btn-unfriend").forEach((btn) => {
-    btn.addEventListener("click", () => handleUnfriend(btn.dataset.id, btn.dataset.username));
-  });
+  AppCache.set("friends", friends);
+  renderFriends(list, empty, friends);
 }
 
-// ------------------------------------------------------------------
-// Load pending requests
-// ------------------------------------------------------------------
-
 async function loadPendingRequests() {
-  const list = document.getElementById("requests-list");
+  const list  = document.getElementById("requests-list");
   const empty = document.getElementById("requests-empty");
-  list.innerHTML = "<span class='spinner-sm'></span> Loading…";
+
+  if (_pendingFirstLoad) {
+    _pendingFirstLoad = false;
+    const cached = AppCache.get("pending_requests");
+    if (cached) {
+      renderRequests(list, empty, cached);
+    } else {
+      list.innerHTML = "<span class='spinner-sm'></span> Loading…";
+    }
+  } else {
+    list.innerHTML = "<span class='spinner-sm'></span> Loading…";
+  }
 
   const result = await Api.getPendingRequests();
-  list.innerHTML = "";
-
   if (!result.ok) {
     list.innerHTML = `<p class="msg msg-error">${result.data?.error || "Failed."}</p>`;
     return;
   }
 
   const requesters = result.data;
-  if (!requesters.length) {
-    empty.classList.remove("hidden");
-    return;
-  }
-  empty.classList.add("hidden");
-
-  requesters.forEach((user) => {
-    const item = document.createElement("div");
-    item.className = "friend-item";
-    item.innerHTML = `
-      <div class="friend-info">
-        ${user.avatar_url
-          ? `<img src="${user.avatar_url}" class="friend-avatar friend-avatar-img" />`
-          : `<div class="friend-avatar">${escapeHtml(getInitial(user.username))}</div>`
-        }
-        <div class="friend-username">@${escapeHtml(user.username)}</div>
-      </div>
-      <div class="friend-actions">
-        <button class="btn btn-primary btn-sm btn-accept" data-id="${user.id}">Accept</button>
-        <button class="btn btn-ghost btn-sm btn-reject" data-id="${user.id}">Decline</button>
-      </div>
-    `;
-    list.appendChild(item);
-  });
-
-  list.querySelectorAll(".btn-accept").forEach((btn) => {
-    btn.addEventListener("click", () => handleAccept(btn.dataset.id));
-  });
-  list.querySelectorAll(".btn-reject").forEach((btn) => {
-    btn.addEventListener("click", () => handleReject(btn.dataset.id));
-  });
+  AppCache.set("pending_requests", requesters);
+  renderRequests(list, empty, requesters);
 }
 
-// ------------------------------------------------------------------
+// ----------------------------------------------------------------
 // Action handlers
-// ------------------------------------------------------------------
+// ----------------------------------------------------------------
 
 async function handleUnfriend(friendId, username) {
   if (!confirm(`Unfriend @${username}?`)) return;
@@ -155,14 +168,14 @@ async function handleReject(requesterId) {
   else alert(result.data?.error || "Failed to reject.");
 }
 
-// ------------------------------------------------------------------
+// ----------------------------------------------------------------
 // Send friend request form
-// ------------------------------------------------------------------
+// ----------------------------------------------------------------
 
 function initSendRequestForm() {
-  const form = document.getElementById("add-friend-form");
+  const form  = document.getElementById("add-friend-form");
   const input = document.getElementById("friend-username-input");
-  const msg = document.getElementById("add-friend-msg");
+  const msg   = document.getElementById("add-friend-msg");
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -191,9 +204,9 @@ function initSendRequestForm() {
   });
 }
 
-// ------------------------------------------------------------------
+// ----------------------------------------------------------------
 // Entry point
-// ------------------------------------------------------------------
+// ----------------------------------------------------------------
 
 (async function init() {
   Auth.requireLogin();
@@ -205,6 +218,5 @@ function initSendRequestForm() {
 
   initSendRequestForm();
 
-  // Load both lists in parallel
   await Promise.all([loadFriends(), loadPendingRequests()]);
 })();

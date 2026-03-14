@@ -52,7 +52,7 @@ function buildNotifItem(n) {
 
   const avatarHtml = n.from_avatar_url
     ? `<img src="${escapeHtml(n.from_avatar_url)}" style="width:38px;height:38px;border-radius:50%;object-fit:cover;flex-shrink:0;" />`
-    : `<div style="width:38px;height:38px;border-radius:50%;background:#eeeef8;color:#5c58a8;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;flex-shrink:0;">${escapeHtml(n.from_username[0] || "?").toUpperCase()}</div>`;
+    : `<div style="width:38px;height:38px;border-radius:50%;background:#eeeef8;color:#5c58a8;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;flex-shrink:0;">${escapeHtml((n.from_username[0] || "?").toUpperCase())}</div>`;
 
   const date = new Date(n.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 
@@ -70,22 +70,41 @@ function buildNotifItem(n) {
   return item;
 }
 
-async function loadNotifications() {
-  const result = await Api.getNotifications();
-  spinner.classList.add("hidden");
-
-  if (!result.ok) {
-    showToast("Could not load notifications.");
-    return;
-  }
-
-  const notifications = result.data;
+function renderNotifications(notifications) {
+  listEl.innerHTML = "";
   if (notifications.length === 0) {
     emptyEl.classList.remove("hidden");
     return;
   }
-
+  emptyEl.classList.add("hidden");
   notifications.forEach(n => listEl.appendChild(buildNotifItem(n)));
+}
+
+async function loadNotifications() {
+  // Show cached notifications instantly
+  const cached = AppCache.get("notifications");
+  if (cached) {
+    spinner.classList.add("hidden");
+    renderNotifications(cached);
+  }
+
+  const result = await Api.getNotifications();
+  spinner.classList.add("hidden");
+
+  if (!result.ok) {
+    if (!cached) showToast("Could not load notifications.");
+    return;
+  }
+
+  const notifications = result.data;
+  AppCache.set("notifications", notifications);
+
+  // Re-render only if something changed (count or read state)
+  const changed =
+    !cached ||
+    cached.length !== notifications.length ||
+    notifications.some((n, i) => n.id !== cached[i]?.id || n.read !== cached[i]?.read);
+  if (changed) renderNotifications(notifications);
 
   // Mark individual read
   listEl.addEventListener("click", async (e) => {
@@ -99,6 +118,7 @@ async function loadNotifications() {
         item.classList.remove("notif-unread");
         btn.remove();
       }
+      AppCache.invalidate("notifications"); // read state changed
       Auth.refreshNotificationBell();
     }
   });
@@ -109,6 +129,7 @@ document.getElementById("btn-mark-all-read").addEventListener("click", async () 
   if (res.ok) {
     listEl.querySelectorAll(".notif-unread").forEach(el => el.classList.remove("notif-unread"));
     listEl.querySelectorAll(".btn-mark-read").forEach(el => el.remove());
+    AppCache.invalidate("notifications"); // read state changed
     Auth.refreshNotificationBell();
   }
 });
