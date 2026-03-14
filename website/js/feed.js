@@ -251,6 +251,18 @@ function buildCard(item) {
       // Remove any existing popover
       document.querySelectorAll(".collection-popover").forEach(p => p.remove());
 
+      // Show popover immediately with a loading state
+      const popover = document.createElement("div");
+      popover.className = "collection-popover";
+      popover.innerHTML = `<div class="collection-popover-section-label" style="color:#999;">Loading…</div>`;
+      saveBtn.parentElement.style.position = "relative";
+      saveBtn.parentElement.appendChild(popover);
+
+      // Close on outside click
+      setTimeout(() => {
+        document.addEventListener("click", () => popover.remove(), { once: true });
+      }, 0);
+
       // Fetch personal categories and collaborative collections in parallel
       const [catResult, collabResult] = await Promise.all([
         Api.getSavedItems(),
@@ -261,10 +273,6 @@ function buildCard(item) {
         ? [...new Set((catResult.data || []).map(s => s.category))]
         : [];
       const collabs = collabResult.ok ? (collabResult.data || []) : [];
-
-      // Build popover
-      const popover = document.createElement("div");
-      popover.className = "collection-popover";
 
       const catListHtml = existingCats.map(cat => `
         <button class="collection-popover-item" data-cat="${escapeHtml(cat)}">📁 ${escapeHtml(cat)}</button>
@@ -289,36 +297,29 @@ function buildCard(item) {
           ${collabListHtml}
         ` : ""}
       `;
-
-      saveBtn.parentElement.style.position = "relative";
-      saveBtn.parentElement.appendChild(popover);
       popover.querySelector(".collection-popover-input").focus();
 
       async function saveToCategory(category) {
         if (!category || !category.trim()) return;
-        popover.remove();
         const prevText = saveBtn.textContent;
+        popover.remove();
+        // Optimistic: show saved immediately
         saveBtn.textContent = "📁 Saved!";
-        saveBtn.disabled = true;
         const result = await Api.saveItem(saveBtn.dataset.id, category.trim());
         if (!result.ok) {
           saveBtn.textContent = prevText;
-          saveBtn.disabled = false;
           showToast("Something went wrong, the item wasn't saved.");
         }
       }
 
       async function addToCollab(collabId, requiresApproval) {
-        popover.remove();
         const prevText = saveBtn.textContent;
-        saveBtn.textContent = "⏳ Adding…";
-        saveBtn.disabled = true;
+        popover.remove();
+        // Optimistic: show expected outcome immediately based on approval setting
+        saveBtn.textContent = requiresApproval ? "⏳ Pending approval" : "📋 Added!";
         const result = await Api.addCollectionItem(collabId, saveBtn.dataset.id);
-        if (result.ok) {
-          saveBtn.textContent = result.data.pending ? "⏳ Pending approval" : "📋 Added!";
-        } else {
+        if (!result.ok) {
           saveBtn.textContent = prevText;
-          saveBtn.disabled = false;
           showToast(result.data?.error || "Something went wrong.");
         }
       }
@@ -340,11 +341,6 @@ function buildCard(item) {
         if (e.key === "Enter") saveToCategory(newInput.value);
         if (e.key === "Escape") popover.remove();
       });
-
-      // Close on outside click
-      setTimeout(() => {
-        document.addEventListener("click", () => popover.remove(), { once: true });
-      }, 0);
     });
   }
 
