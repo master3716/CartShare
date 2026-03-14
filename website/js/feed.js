@@ -279,7 +279,7 @@ function buildCard(item) {
       `).join("");
 
       const collabListHtml = collabs.map(c => `
-        <button class="collection-popover-item collection-popover-collab" data-collab-id="${escapeHtml(c.id)}" data-requires-approval="${c.requires_approval}">
+        <button class="collection-popover-item collection-popover-collab" data-collab-id="${escapeHtml(c.id)}" data-requires-approval="${c.requires_approval}" data-owner-id="${escapeHtml(c.owner_id)}">
           📋 ${escapeHtml(c.name)}${c.requires_approval ? " 🔒" : ""}
         </button>
       `).join("");
@@ -331,7 +331,8 @@ function buildCard(item) {
 
       // Collaborative collection clicks
       popover.querySelectorAll(".collection-popover-collab").forEach(btn => {
-        btn.addEventListener("click", () => addToCollab(btn.dataset.collabId, btn.dataset.requiresApproval === "true"));
+        const isOwner = btn.dataset.ownerId === user.id;
+        btn.addEventListener("click", () => addToCollab(btn.dataset.collabId, !isOwner && btn.dataset.requiresApproval === "true"));
       });
 
       // New personal category

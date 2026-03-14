@@ -243,7 +243,7 @@ function buildMemberEl(username, avatarUrl, label, onRemove) {
   return wrap;
 }
 
-function buildCollabItemCard(item, isPending) {
+function buildCollabItemCard(item, isPending, isOwner = false) {
   const p = item.purchase;
   const card = document.createElement("div");
   card.className = "purchase-card";
@@ -253,7 +253,7 @@ function buildCollabItemCard(item, isPending) {
     ? `<img class="purchase-card-img" src="${escapeHtml(p.image_url)}" alt="" />`
     : `<div class="purchase-card-img-placeholder">🛍️</div>`;
 
-  const canRemove = !isPending && item.added_by_user_id === currentUser.id;
+  const canRemove = !isPending && (isOwner || item.added_by_user_id === currentUser.id);
 
   card.innerHTML = `
     ${imgHtml}
@@ -333,13 +333,13 @@ async function openCollabCollection(collectionId) {
   if (!c.enriched_items || c.enriched_items.length === 0) {
     collabItemsEmpty.classList.remove("hidden");
   } else {
-    c.enriched_items.forEach(item => collabItemsGrid.appendChild(buildCollabItemCard(item, false)));
+    c.enriched_items.forEach(item => collabItemsGrid.appendChild(buildCollabItemCard(item, false, isOwner)));
   }
 
   // Pending items (owner only)
   if (isOwner && c.enriched_pending_items && c.enriched_pending_items.length > 0) {
     pendingSection.classList.remove("hidden");
-    c.enriched_pending_items.forEach(item => pendingGrid.appendChild(buildCollabItemCard(item, true)));
+    c.enriched_pending_items.forEach(item => pendingGrid.appendChild(buildCollabItemCard(item, true, isOwner)));
   }
 
   lastItemCount    = (c.enriched_items || []).length;
@@ -439,7 +439,7 @@ async function pollCollab(collectionId) {
       collabItemsEmpty.classList.remove("hidden");
     } else {
       collabItemsEmpty.classList.add("hidden");
-      c.enriched_items.forEach(item => collabItemsGrid.appendChild(buildCollabItemCard(item, false)));
+      c.enriched_items.forEach(item => collabItemsGrid.appendChild(buildCollabItemCard(item, false, isOwner)));
     }
     attachCollabItemsHandler(collectionId);
   }
@@ -451,7 +451,7 @@ async function pollCollab(collectionId) {
     pendingGrid.innerHTML = "";
     if (newPendingCount > 0) {
       pendingSection.classList.remove("hidden");
-      c.enriched_pending_items.forEach(item => pendingGrid.appendChild(buildCollabItemCard(item, true)));
+      c.enriched_pending_items.forEach(item => pendingGrid.appendChild(buildCollabItemCard(item, true, isOwner)));
     } else {
       pendingSection.classList.add("hidden");
     }
