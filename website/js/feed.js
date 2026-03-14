@@ -501,8 +501,8 @@ async function loadFeed() {
 // ------------------------------------------------------------------
 
 function startPolling() {
-  setInterval(pollStats, 20000);
-  setInterval(pollComments, 45000);
+  setInterval(pollStats, 10000);
+  setInterval(pollComments, 15000);
 }
 
 async function pollStats() {

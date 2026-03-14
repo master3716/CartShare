@@ -106,23 +106,24 @@ async function loadNotifications() {
     notifications.some((n, i) => n.id !== cached[i]?.id || n.read !== cached[i]?.read);
   if (changed) renderNotifications(notifications);
 
-  // Mark individual read
-  listEl.addEventListener("click", async (e) => {
-    const btn = e.target.closest(".btn-mark-read");
-    if (!btn) return;
-    const id = btn.dataset.id;
-    const res = await Api.markNotificationRead(id);
-    if (res.ok) {
-      const item = listEl.querySelector(`[data-id="${id}"]`);
-      if (item) {
-        item.classList.remove("notif-unread");
-        btn.remove();
-      }
-      AppCache.invalidate("notifications"); // read state changed
-      Auth.refreshNotificationBell();
-    }
-  });
 }
+
+// Wire mark-read once (not inside loadNotifications to avoid duplicate listeners)
+listEl.addEventListener("click", async (e) => {
+  const btn = e.target.closest(".btn-mark-read");
+  if (!btn) return;
+  const id = btn.dataset.id;
+  const res = await Api.markNotificationRead(id);
+  if (res.ok) {
+    const item = listEl.querySelector(`[data-id="${id}"]`);
+    if (item) {
+      item.classList.remove("notif-unread");
+      btn.remove();
+    }
+    AppCache.invalidate("notifications");
+    Auth.refreshNotificationBell();
+  }
+});
 
 document.getElementById("btn-mark-all-read").addEventListener("click", async () => {
   const res = await Api.markAllNotificationsRead();
@@ -135,3 +136,4 @@ document.getElementById("btn-mark-all-read").addEventListener("click", async () 
 });
 
 loadNotifications();
+setInterval(loadNotifications, 30000);

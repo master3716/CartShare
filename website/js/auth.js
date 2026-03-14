@@ -112,8 +112,9 @@ const Auth = (() => {
 
       navLinks.insertBefore(avatarBtn, usernameEl);
 
-      // Load notification bell unread count
+      // Load notification bell unread count and keep it fresh
       Auth.refreshNotificationBell();
+      setInterval(() => Auth.refreshNotificationBell(), 60000);
     },
 
     async refreshNotificationBell() {

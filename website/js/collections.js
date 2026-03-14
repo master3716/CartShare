@@ -468,7 +468,7 @@ function stopCollabPolling() {
 function startCollabPolling(collectionId) {
   stopCollabPolling();
   const gen = pollGeneration;
-  collabPollInterval = setInterval(() => pollCollab(collectionId, gen), 15000);
+  collabPollInterval = setInterval(() => pollCollab(collectionId, gen), 10000);
 }
 
 async function pollCollab(collectionId, gen) {
