@@ -451,6 +451,8 @@ async function pollCollab(collectionId) {
   if (collectionId !== currentCollabId) return stopCollabPolling();
   if (actionInFlight) return;
   const result = await Api.getCollection(collectionId);
+  // An action may have started while the fetch was in flight — discard stale data
+  if (actionInFlight) return;
   if (!result.ok) return;
 
   const c = result.data;
