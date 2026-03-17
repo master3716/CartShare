@@ -61,6 +61,53 @@
   100% { transform: scaleX(0); }
 }
 
+/* Background animations */
+@keyframes gridScroll {
+  0% { background-position: 0 0; }
+  100% { background-position: 32px 32px; }
+}
+
+@keyframes rotateSlow {
+  0% { transform: rotate(0deg) scale(1); }
+  50% { transform: rotate(180deg) scale(1.1); }
+  100% { transform: rotate(360deg) scale(1); }
+}
+
+@keyframes orb1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(60px, -40px) scale(1.1); }
+  66% { transform: translate(-40px, 30px) scale(0.9); }
+}
+
+@keyframes orb2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(-50px, 60px) scale(0.95); }
+  66% { transform: translate(70px, -30px) scale(1.05); }
+}
+
+@keyframes orb3 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(40px, 50px) scale(1.08); }
+}
+
+@keyframes shootingStar {
+  0% { transform: translateX(-100px) translateY(0); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: translateX(calc(100vw + 100px)) translateY(60px); opacity: 0; }
+}
+
+.bg-dot-grid {
+  background-image: radial-gradient(circle, rgba(124,92,246,0.18) 1px, transparent 1px);
+  background-size: 32px 32px;
+  animation: gridScroll 8s linear infinite;
+}
+
+.orb-1 { animation: orb1 12s ease-in-out infinite; }
+.orb-2 { animation: orb2 15s ease-in-out infinite; }
+.orb-3 { animation: orb3 10s ease-in-out infinite; }
+.rotate-slow { animation: rotateSlow 20s linear infinite; }
+
 /* Scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
