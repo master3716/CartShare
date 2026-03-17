@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { Bell, LogOut, Menu, X, Home, LayoutDashboard, Users, FolderOpen } from 'lucide-react'
+import { Bell, LogOut, Menu, X, Home, LayoutDashboard, Users, FolderOpen, List } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { useToast } from '../../contexts/ToastContext'
 import { useNotifications } from '../../hooks/useNotifications'
@@ -30,6 +30,7 @@ export default function Navbar() {
   const navLinks = [
     { to: '/feed', label: 'Feed', icon: <Home className="w-4 h-4" /> },
     { to: '/dashboard', label: 'My List', icon: <LayoutDashboard className="w-4 h-4" /> },
+    { to: '/my-listings', label: 'My Feed', icon: <List className="w-4 h-4" /> },
     { to: '/friends', label: 'Friends', icon: <Users className="w-4 h-4" /> },
     { to: '/collections', label: 'Collections', icon: <FolderOpen className="w-4 h-4" /> },
   ]
