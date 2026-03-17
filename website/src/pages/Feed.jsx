@@ -86,10 +86,6 @@ export default function Feed() {
     ? items.filter(i => i.category === activeCategory)
     : items
 
-  // Only show categories that actually have items in the feed
-  const availableCategories = CATEGORIES.filter(c =>
-    items.some(i => i.category === c.value)
-  )
 
   return (
     <Layout>
@@ -100,7 +96,7 @@ export default function Feed() {
         </div>
 
         {/* Category filter */}
-        {!loading && availableCategories.length > 0 && (
+        {!loading && items.length > 0 && (
           <div className="overflow-x-auto -mx-4 px-4 mb-6 animate-fade-in">
             <div className="flex gap-2 pb-1" style={{ width: 'max-content' }}>
               <button
@@ -113,7 +109,7 @@ export default function Feed() {
               >
                 ✨ All
               </button>
-              {availableCategories.map(cat => (
+              {CATEGORIES.map(cat => (
                 <button
                   key={cat.value}
                   onClick={() => setActiveCategory(activeCategory === cat.value ? '' : cat.value)}
