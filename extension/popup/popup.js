@@ -68,6 +68,8 @@ const main = {
   previewPrice: document.getElementById("preview-price"),
   previewPlatform: document.getElementById("preview-platform"),
   addForm: document.getElementById("add-form"),
+  itemCategory: document.getElementById("item-category"),
+  categoryAutoLabel: document.getElementById("category-auto-label"),
   itemNotes: document.getElementById("item-notes"),
   itemPublic: document.getElementById("item-public"),
   btnAddItem: document.getElementById("btn-add-item"),
@@ -192,6 +194,18 @@ function populateItemPreview(item) {
     main.previewImage.style.display = "none";
   }
 
+  // Auto-detect and pre-select category
+  const detected = detectCategory(item.item_name, item.platform);
+  main.itemCategory.value = detected;
+  if (detected) {
+    main.categoryAutoLabel.style.display = "inline";
+  } else {
+    main.categoryAutoLabel.style.display = "none";
+  }
+  main.itemCategory.addEventListener("change", () => {
+    main.categoryAutoLabel.style.display = "none";
+  }, { once: true });
+
   show(main.itemPreview);
   show(main.addForm);
 }
@@ -214,7 +228,7 @@ async function addCurrentItem() {
       ...currentItem,
       notes: main.itemNotes.value.trim(),
       is_public: main.itemPublic.checked,
-      category: detectCategory(currentItem.item_name, currentItem.platform),
+      category: main.itemCategory.value,
     },
   });
 
@@ -224,6 +238,8 @@ async function addCurrentItem() {
   if (result.success) {
     show(main.addSuccess);
     main.itemNotes.value = "";
+    main.itemCategory.value = "";
+    main.categoryAutoLabel.style.display = "none";
     main.itemPublic.checked = true;
   } else {
     showError(main.addError, result.error || "Failed to save.");
