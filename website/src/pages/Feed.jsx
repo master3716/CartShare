@@ -5,14 +5,35 @@ import { useAuth } from '../contexts/AuthContext'
 import Layout from '../components/layout/Layout'
 import SocialCard from '../components/purchase/SocialCard'
 import EmptyState from '../components/ui/EmptyState'
-import Spinner from '../components/ui/Spinner'
+
+function SkeletonCard() {
+  return (
+    <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+      <div className="p-4 flex items-center gap-3">
+        <div className="w-10 h-10 rounded-full shimmer-bg flex-shrink-0" />
+        <div className="flex-1 space-y-2">
+          <div className="h-3 w-24 rounded shimmer-bg" />
+          <div className="h-2 w-16 rounded shimmer-bg" />
+        </div>
+      </div>
+      <div className="h-52 shimmer-bg" />
+      <div className="p-4 space-y-3">
+        <div className="h-4 w-3/4 rounded shimmer-bg" />
+        <div className="h-3 w-1/4 rounded shimmer-bg" />
+        <div className="flex gap-2">
+          <div className="h-8 w-20 rounded-xl shimmer-bg" />
+          <div className="h-8 w-24 rounded-xl shimmer-bg" />
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export default function Feed() {
   const { user } = useAuth()
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const renderedIdsRef = useRef(new Set())
-  const statsIntervalRef = useRef(null)
 
   const loadFeed = async (isBackground = false) => {
     if (!isBackground) {
@@ -69,15 +90,14 @@ export default function Feed() {
   return (
     <Layout>
       <div className="max-w-2xl mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-6 animate-fade-in">
           <h1 className="text-xl font-bold text-white">Friends' Feed</h1>
           <span className="text-sm text-gray-500">{items.length} items</span>
         </div>
 
         {loading && (
-          <div className="flex flex-col items-center gap-4 py-16">
-            <Spinner size="lg" />
-            <p className="text-sm text-gray-500">Loading your feed...</p>
+          <div className="space-y-4">
+            {[1, 2, 3].map(i => <SkeletonCard key={i} />)}
           </div>
         )}
 
@@ -92,12 +112,17 @@ export default function Feed() {
 
         {items.length > 0 && (
           <div className="space-y-6">
-            {items.map(item => (
-              <SocialCard
+            {items.map((item, index) => (
+              <div
                 key={item.id}
-                item={item}
-                currentUserId={user?.id}
-              />
+                style={{ animationDelay: `${Math.min(index * 0.08, 0.5)}s` }}
+                className="animate-fade-in-up [animation-fill-mode:both]"
+              >
+                <SocialCard
+                  item={item}
+                  currentUserId={user?.id}
+                />
+              </div>
             ))}
           </div>
         )}

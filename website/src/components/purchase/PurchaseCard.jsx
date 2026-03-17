@@ -39,14 +39,14 @@ export default function PurchaseCard({ purchase: initialPurchase, onDeleted, onV
   }
 
   return (
-    <div className={`bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden hover:border-gray-700 hover:-translate-y-0.5 transition-all duration-200 flex flex-col ${deleting ? 'opacity-40 pointer-events-none' : ''}`}>
+    <div className={`bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden card-hover group animate-fade-in-up flex flex-col ${deleting ? 'opacity-40 pointer-events-none' : ''}`}>
       {/* Image */}
-      <div className="aspect-video bg-gray-800 flex items-center justify-center overflow-hidden">
+      <div className="aspect-video bg-gray-800 flex items-center justify-center overflow-hidden relative">
         {purchase.image_url ? (
           <img
             src={purchase.image_url}
             alt={purchase.item_name}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
             loading="lazy"
           />
         ) : (
@@ -54,6 +54,8 @@ export default function PurchaseCard({ purchase: initialPurchase, onDeleted, onV
             <ShoppingBag className="w-10 h-10" />
           </div>
         )}
+        {/* Gradient overlay on hover */}
+        <div className="absolute inset-0 bg-gradient-to-t from-gray-900/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
       </div>
 
       {/* Body */}

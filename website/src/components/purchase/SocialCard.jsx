@@ -79,7 +79,7 @@ function SaveCollectionPopover({ purchaseId, onClose }) {
   }
 
   return (
-    <div className="absolute right-0 bottom-full mb-2 z-50 bg-gray-900 border border-gray-700 rounded-xl shadow-2xl w-56 overflow-hidden" onClick={e => e.stopPropagation()}>
+    <div className="absolute right-0 bottom-full mb-2 z-50 bg-gray-900 border border-gray-700 rounded-xl shadow-2xl w-56 overflow-hidden animate-scale-in" onClick={e => e.stopPropagation()}>
       {loading && savedItems.length === 0 ? (
         <div className="p-3 text-xs text-gray-500">Loading...</div>
       ) : (
@@ -244,10 +244,12 @@ export default function SocialCard({ item: initialItem, currentUserId }) {
   }
 
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden hover:border-gray-700 transition-all duration-200">
+    <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden card-hover animate-fade-in-up group">
       {/* Header */}
       <div className="flex items-center gap-3 p-4 pb-3">
-        <Avatar username={item.friend_username} avatarUrl={item.friend_avatar_url} size="md" />
+        <div className="ring-2 ring-white/10 group-hover:ring-brand-500/40 transition-all duration-300 rounded-full">
+          <Avatar username={item.friend_username} avatarUrl={item.friend_avatar_url} size="md" />
+        </div>
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-white text-sm">@{item.friend_username}</p>
           <p className="text-xs text-gray-500">{timeAgo(item.added_at)}</p>
@@ -260,7 +262,7 @@ export default function SocialCard({ item: initialItem, currentUserId }) {
           <img
             src={item.image_url}
             alt={item.item_name}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
             loading="lazy"
           />
         ) : (
@@ -279,26 +281,29 @@ export default function SocialCard({ item: initialItem, currentUserId }) {
         </div>
 
         {/* Click count */}
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-gray-500" key={item.click_count}>
           👆 {item.click_count || 0} {item.click_count === 1 ? 'person' : 'people'} clicked this
         </p>
 
         {/* Actions row */}
         <div className="flex flex-wrap gap-2 items-center">
-          <button
+          <a
+            href={item.product_url}
             onClick={handleShopNow}
-            className="flex items-center gap-2 bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-500 hover:to-brand-400 text-white font-semibold px-4 py-2 rounded-xl transition-all shadow-lg shadow-brand-500/25 active:scale-95 text-sm"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group/btn flex items-center gap-2 bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-500 hover:to-brand-400 text-white font-semibold px-4 py-2 rounded-xl transition-all shadow-lg shadow-brand-500/25 active:scale-95 text-sm"
           >
-            <ExternalLink className="w-4 h-4" />
             Shop Now
-          </button>
+            <ExternalLink className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
+          </a>
 
           {currentUserId && (
             <button
               onClick={handleMeToo}
-              className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium transition-all ${
+              className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium transition-all active:scale-90 ${
                 iAmBuying
-                  ? 'bg-brand-500/20 text-brand-300 border border-brand-500/30'
+                  ? 'bg-brand-500/20 text-brand-300 border border-brand-500/30 animate-pulse-glow'
                   : 'bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white'
               }`}
             >
@@ -346,7 +351,7 @@ export default function SocialCard({ item: initialItem, currentUserId }) {
               {showAlsoBuying ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
             </button>
             {showAlsoBuying && (
-              <div className="mt-2 flex flex-wrap gap-2">
+              <div className="mt-2 flex flex-wrap gap-2 animate-fade-in">
                 {friendBuyers.map(u => (
                   <div key={u.id || u.username} className="flex items-center gap-1.5">
                     <Avatar username={u.username} avatarUrl={u.avatar_url} size="sm" />
@@ -360,7 +365,7 @@ export default function SocialCard({ item: initialItem, currentUserId }) {
 
         {/* Comments */}
         {showComments && (
-          <div className="border-t border-gray-800 pt-3 space-y-2">
+          <div className="border-t border-gray-800 pt-3 space-y-2 animate-fade-in">
             {!commentsLoaded && <p className="text-xs text-gray-500">Loading comments...</p>}
             {commentsLoaded && comments.length === 0 && (
               <p className="text-xs text-gray-500">No comments yet. Be the first!</p>

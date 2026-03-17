@@ -39,37 +39,50 @@ export default function Auth() {
     }
   }
 
-  const inputClass = "bg-gray-900/80 border border-gray-700 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 rounded-xl px-4 py-3 text-white placeholder-gray-500 outline-none transition-all w-full"
+  const inputClass = "bg-gray-900/80 border border-gray-700 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:shadow-lg focus:shadow-brand-500/20 rounded-xl px-4 py-3 text-white placeholder-gray-500 outline-none transition-all w-full"
 
   return (
     <div className="min-h-screen bg-gray-950 flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Background blobs */}
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-brand-600/20 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-600/15 rounded-full blur-3xl pointer-events-none" />
+      {/* Animated background blobs */}
+      <div className="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] bg-brand-600/25 rounded-full blur-[120px] animate-float pointer-events-none" />
+      <div className="absolute bottom-[-20%] right-[-10%] w-[600px] h-[600px] bg-purple-700/20 rounded-full blur-[120px] animate-float-delayed pointer-events-none" />
+      <div className="absolute top-[50%] left-[60%] w-[300px] h-[300px] bg-violet-600/15 rounded-full blur-[80px] animate-float-slow pointer-events-none" />
 
-      <div className="relative w-full max-w-md">
+      {/* Static particle dots */}
+      <div className="absolute top-[15%] left-[20%] w-1.5 h-1.5 bg-brand-400/30 rounded-full pointer-events-none" />
+      <div className="absolute top-[70%] left-[15%] w-1 h-1 bg-purple-400/20 rounded-full pointer-events-none" />
+      <div className="absolute top-[30%] right-[20%] w-2 h-2 bg-brand-300/20 rounded-full pointer-events-none" />
+      <div className="absolute top-[80%] right-[25%] w-1.5 h-1.5 bg-violet-400/25 rounded-full pointer-events-none" />
+      <div className="absolute top-[45%] left-[8%] w-1 h-1 bg-brand-500/30 rounded-full pointer-events-none" />
+      <div className="absolute top-[20%] right-[10%] w-1 h-1 bg-purple-500/25 rounded-full pointer-events-none" />
+
+      <div className="relative w-full max-w-md animate-scale-in">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="text-6xl mb-3">🐱</div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-brand-400 to-brand-300 bg-clip-text text-transparent">
+          <div className="text-7xl mb-4 select-none animate-float">🐱</div>
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-brand-400 to-purple-400 bg-clip-text text-transparent">
             ShoppyCat
           </h1>
           <p className="text-gray-400 mt-2 text-sm">Share what you're buying with friends</p>
         </div>
 
         {/* Card */}
-        <div className="glass rounded-2xl p-8 shadow-2xl">
+        <div className="glass rounded-2xl p-8 shadow-2xl animated-border">
           {/* Tab switcher */}
-          <div className="flex bg-gray-900 rounded-xl p-1 mb-6">
+          <div className="flex bg-gray-900 rounded-xl p-1 mb-6 relative">
+            {/* Sliding indicator */}
+            <div
+              className={`absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-lg bg-brand-500 shadow-lg transition-transform duration-300 ease-out ${tab === 'register' ? 'translate-x-[calc(100%+4px)]' : 'translate-x-0'}`}
+            />
             <button
               onClick={() => { setTab('login'); setError('') }}
-              className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${tab === 'login' ? 'bg-brand-500 text-white shadow-lg' : 'text-gray-400 hover:text-white'}`}
+              className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors relative z-10 ${tab === 'login' ? 'text-white' : 'text-gray-400 hover:text-white'}`}
             >
               Sign In
             </button>
             <button
               onClick={() => { setTab('register'); setError('') }}
-              className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${tab === 'register' ? 'bg-brand-500 text-white shadow-lg' : 'text-gray-400 hover:text-white'}`}
+              className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors relative z-10 ${tab === 'register' ? 'text-white' : 'text-gray-400 hover:text-white'}`}
             >
               Create Account
             </button>
@@ -77,7 +90,7 @@ export default function Auth() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {tab === 'register' && (
-              <div>
+              <div className="animate-fade-in-up-fast">
                 <label className="block text-xs font-medium text-gray-400 mb-1.5">Username</label>
                 <input
                   type="text"
@@ -118,7 +131,7 @@ export default function Auth() {
             </div>
 
             {error && (
-              <div className="bg-red-500/10 border border-red-500/30 text-red-300 rounded-xl px-4 py-3 text-sm">
+              <div className="bg-red-500/10 border border-red-500/30 text-red-300 rounded-xl px-4 py-3 text-sm animate-fade-in">
                 {error}
               </div>
             )}
@@ -126,7 +139,7 @@ export default function Auth() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-500 hover:to-brand-400 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-brand-500/25 active:scale-95 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed mt-2"
+              className="w-full bg-gradient-to-r from-brand-600 via-purple-600 to-brand-500 bg-[length:200%_auto] animate-gradient-x text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-brand-500/25 active:scale-95 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed mt-2 hover:shadow-brand-500/40 hover:shadow-xl"
             >
               {loading ? <Spinner size="sm" /> : null}
               {loading ? 'Loading...' : tab === 'login' ? 'Sign In' : 'Create Account'}

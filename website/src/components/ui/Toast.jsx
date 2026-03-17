@@ -1,27 +1,37 @@
 import React from 'react'
 import { useToast } from '../../contexts/ToastContext'
-import { CheckCircle, XCircle, Info, X } from 'lucide-react'
+import { CheckCircle, AlertCircle, Info, X } from 'lucide-react'
+
+const icons = {
+  success: <CheckCircle className="w-5 h-5 text-emerald-400 flex-shrink-0" />,
+  error: <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />,
+  info: <Info className="w-5 h-5 text-brand-400 flex-shrink-0" />,
+}
+
+const borders = {
+  success: 'border-l-emerald-500',
+  error: 'border-l-red-500',
+  info: 'border-l-brand-500',
+}
 
 function ToastItem({ toast, onRemove }) {
-  const icons = {
-    success: <CheckCircle className="w-5 h-5 flex-shrink-0" />,
-    error: <XCircle className="w-5 h-5 flex-shrink-0" />,
-    info: <Info className="w-5 h-5 flex-shrink-0" />,
-  }
-
-  const colors = {
-    success: 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300',
-    error: 'bg-red-500/15 border-red-500/30 text-red-300',
-    info: 'bg-brand-500/15 border-brand-500/30 text-brand-300',
-  }
-
   return (
-    <div className={`flex items-center gap-3 px-4 py-3 rounded-xl border backdrop-blur-xl shadow-xl animate-slide-up ${colors[toast.type] || colors.info}`}>
+    <div className={`relative animate-slide-up glass border-l-4 ${borders[toast.type] || borders.info} rounded-xl px-4 py-3 flex items-center gap-3 min-w-[280px] max-w-sm shadow-2xl overflow-hidden`}>
       {icons[toast.type] || icons.info}
-      <span className="text-sm font-medium flex-1">{toast.message}</span>
-      <button onClick={() => onRemove(toast.id)} className="opacity-60 hover:opacity-100 transition-opacity">
+      <span className="text-sm text-white flex-1 font-medium">{toast.message}</span>
+      <button onClick={() => onRemove(toast.id)} className="text-gray-500 hover:text-white transition-colors flex-shrink-0">
         <X className="w-4 h-4" />
       </button>
+      {/* Progress bar */}
+      <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-white/10 rounded-b-xl overflow-hidden">
+        <div
+          className="h-full bg-white/30"
+          style={{
+            animation: 'shrink 3.5s linear forwards',
+            transformOrigin: 'left',
+          }}
+        />
+      </div>
     </div>
   )
 }

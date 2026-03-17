@@ -6,22 +6,35 @@ import Layout from '../components/layout/Layout'
 import AddPurchaseForm from '../components/purchase/AddPurchaseForm'
 import PurchaseCard from '../components/purchase/PurchaseCard'
 import EmptyState from '../components/ui/EmptyState'
-import Spinner from '../components/ui/Spinner'
 import Avatar from '../components/ui/Avatar'
 import { PlatformBadge } from '../components/ui/Badge'
 import { ExternalLink, ShoppingBag } from 'lucide-react'
 
+function SkeletonPurchaseCard() {
+  return (
+    <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+      <div className="h-44 shimmer-bg" />
+      <div className="p-4 space-y-2">
+        <div className="h-4 w-3/4 rounded shimmer-bg" />
+        <div className="h-3 w-1/3 rounded shimmer-bg" />
+        <div className="h-3 w-16 rounded-full shimmer-bg mt-2" />
+      </div>
+    </div>
+  )
+}
+
 function FriendsFeedStrip({ items }) {
   if (!items || items.length === 0) return null
   return (
-    <div className="mb-8">
+    <div className="mb-8 animate-fade-in">
       <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">Recent from Friends</h2>
       <div className="overflow-x-auto -mx-4 px-4">
         <div className="flex gap-3 pb-2" style={{ width: 'max-content' }}>
-          {items.slice(0, 10).map(item => (
+          {items.slice(0, 10).map((item, index) => (
             <div
               key={item.id}
-              className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden flex-shrink-0 w-44 hover:border-gray-700 transition-all"
+              style={{ animationDelay: `${index * 0.05}s` }}
+              className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden flex-shrink-0 w-44 hover:border-gray-700 card-hover transition-all animate-fade-in-up [animation-fill-mode:both]"
             >
               <div className="h-24 bg-gray-800 flex items-center justify-center overflow-hidden">
                 {item.image_url ? (
@@ -121,7 +134,7 @@ export default function Dashboard() {
   return (
     <Layout>
       <div className="max-w-4xl mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-6 animate-fade-in">
           <h1 className="text-xl font-bold text-white">My List</h1>
           <span className="text-sm text-gray-500">{purchases.length} items</span>
         </div>
@@ -131,8 +144,11 @@ export default function Dashboard() {
         <FriendsFeedStrip items={feedItems} />
 
         {loading && purchases.length === 0 ? (
-          <div className="flex justify-center py-16">
-            <Spinner size="lg" />
+          <div>
+            <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">My Items</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+              {[1, 2, 3, 4].map(i => <SkeletonPurchaseCard key={i} />)}
+            </div>
           </div>
         ) : purchases.length === 0 ? (
           <EmptyState
@@ -141,16 +157,21 @@ export default function Dashboard() {
             description="Start adding items you've bought or want to buy. Share them with friends!"
           />
         ) : (
-          <div>
+          <div className="animate-fade-in">
             <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">My Items</h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-              {purchases.map(purchase => (
-                <PurchaseCard
+              {purchases.map((purchase, index) => (
+                <div
                   key={purchase.id}
-                  purchase={purchase}
-                  onDeleted={handleDeleted}
-                  onVisibilityToggled={handleVisibilityToggled}
-                />
+                  style={{ animationDelay: `${Math.min(index * 0.06, 0.4)}s` }}
+                  className="animate-fade-in-up [animation-fill-mode:both]"
+                >
+                  <PurchaseCard
+                    purchase={purchase}
+                    onDeleted={handleDeleted}
+                    onVisibilityToggled={handleVisibilityToggled}
+                  />
+                </div>
               ))}
             </div>
           </div>
