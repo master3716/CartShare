@@ -333,6 +333,7 @@ async function addCurrentItem() {
       ...currentItem,
       notes: main.itemNotes.value.trim(),
       is_public: main.itemPublic.checked,
+      category: detectCategory(currentItem.item_name, currentItem.platform),
     },
   });
 
@@ -387,6 +388,7 @@ async function shareManualItem(e) {
       image_url: "",
       notes: "",
       is_public: main.sharePublic.checked,
+      category: detectCategory(name, platform),
     },
   });
 
