@@ -16,11 +16,11 @@ function detectPlatform(url) {
 }
 
 const CATEGORY_KEYWORDS = [
-  { value: 'electronics', words: ['laptop','computer','pc','phone','iphone','samsung','android','tablet','ipad','headphone','earphone','earbud','airpod','speaker','camera','monitor','keyboard','mouse','cable','charger','battery','tv','television','gaming','console','playstation','xbox','nintendo','gpu','cpu','processor','ram','ssd','hard drive','router','printer','smartwatch','watch','drone','microphone','webcam','usb','hdmi','graphics card','motherboard','power supply','led','rgb','projector'] },
+  { value: 'electronics', words: ['laptop','computer','pc','phone','iphone','samsung','android','tablet','ipad','headphone','earphone','earbud','airpod','speaker','camera','monitor','keyboard','mouse','cable','charger','battery','tv','television','gaming','console','playstation','xbox','nintendo','gpu','cpu','processor','ram','ssd','hard drive','router','printer','smartwatch','watch','drone','microphone','webcam','usb','hdmi','graphics card','motherboard','power supply','led','rgb','projector','coffee machine','espresso machine','air fryer','instant pot','rice cooker','blender','appliance','mixer'] },
   { value: 'fashion', words: ['shirt','pants','dress','shoes','sneakers','boots','jacket','coat','hoodie','sweater','jeans','skirt','blouse','suit','tie','hat','cap','scarf','gloves','handbag','purse','wallet','belt','jewelry','necklace','earring','ring','bracelet','sunglasses','glasses','clothing','apparel','fashion','shorts','leggings','swimsuit','bikini','underwear','socks','sandals','heels','loafers','lace','fabric','linen','cotton'] },
-  { value: 'home_kitchen', words: ['kitchen','cookware','pan','pot','knife','blender','toaster','coffee maker','microwave','refrigerator','furniture','chair','table','sofa','couch','bed','pillow','blanket','curtain','lamp','storage','organizer','cleaning','vacuum','mop','candle','vase','rug','carpet','shelf','cabinet','drawer','mattress','frame','mirror','clock','towel','sheet','duvet'] },
+  { value: 'home_kitchen', words: ['kitchen','cookware','pan','pot','knife','toaster','coffee maker','coffee machine','espresso','microwave','refrigerator','furniture','chair','table','sofa','couch','bed','pillow','blanket','curtain','lamp','storage','organizer','cleaning','vacuum','mop','candle','vase','rug','carpet','shelf','cabinet','drawer','mattress','frame','mirror','clock','towel','sheet','duvet','air fryer','instant pot','rice cooker','kettle','juicer','food processor','toaster oven','dishwasher'] },
   { value: 'baby_kids', words: ['baby','infant','toddler','diaper','stroller','crib','pacifier','bottle','formula','kids','children','child','newborn','maternity','nursery','baby monitor','car seat','high chair','playpen','teether','sippy'] },
-  { value: 'beauty_health', words: ['makeup','lipstick','foundation','mascara','skincare','moisturizer','serum','shampoo','conditioner','perfume','cologne','vitamin','supplement','protein','fitness','yoga mat','medicine','cream','lotion','sunscreen','face wash','toner','blush','eyeshadow','concealer','primer','nail','hair','brush','razor','deodorant','toothbrush','dental','health'] },
+  { value: 'beauty_health', words: ['makeup','lipstick','foundation','mascara','skincare','moisturizer','serum','shampoo','conditioner','perfume','cologne','vitamin','supplement','fitness','yoga mat','medicine','cream','lotion','sunscreen','face wash','toner','blush','eyeshadow','concealer','primer','nail','hair','brush','razor','deodorant','toothbrush','dental','health'] },
   { value: 'sports', words: ['gym','workout','exercise','weights','dumbbell','barbell','yoga','bicycle','bike','tent','camping','hiking','running','football','basketball','soccer','tennis','golf','swimming','sports','athletic','training','resistance band','jump rope','treadmill','skiing','snowboard','fishing','hunting','cycling','racket','glove','helmet','knee pad'] },
   { value: 'books_media', words: ['book','novel','textbook','kindle','magazine','music','movie','dvd','vinyl','record','audiobook','manga','comic','journal','planner','notebook','pen','pencil','art supply','painting','drawing','craft','stationery'] },
   { value: 'toys_games', words: ['toy','lego','puzzle','board game','action figure','doll','stuffed animal','playset','video game','card game','remote control','rc car','building block','play','game','figurine','collectible','model','train set'] },
@@ -28,16 +28,17 @@ const CATEGORY_KEYWORDS = [
   { value: 'pets', words: ['dog','cat','pet','collar','leash','cage','aquarium','fish','bird','hamster','rabbit','litter','pet food','treat','chew','crate','carrier','grooming','flea','pet bed','scratching post','catnip','bone'] },
 ]
 
-function detectCategory(name, platform) {
-  if (!name) return ''
+export function detectCategories(name, platform) {
+  if (!name) return []
   const lower = name.toLowerCase()
-  // Platform hint: Shein is almost always fashion
-  if (platform === 'Shein') return 'fashion'
-  // Keyword matching — first match wins
+  const results = []
+  if (platform === 'Shein' && !results.includes('fashion')) results.push('fashion')
   for (const cat of CATEGORY_KEYWORDS) {
-    if (cat.words.some(w => lower.includes(w))) return cat.value
+    if (!results.includes(cat.value) && cat.words.some(w => lower.includes(w))) {
+      results.push(cat.value)
+    }
   }
-  return ''
+  return results
 }
 
 const platforms = ['Amazon', 'AliExpress', 'Temu', 'Shein', 'Etsy', 'Other']
@@ -65,7 +66,7 @@ export default function AddPurchaseForm({ onAdded }) {
     name: '',
     price: '',
     platform: 'Other',
-    category: '',
+    categories: [],
     isPublic: true,
   })
 
@@ -76,18 +77,27 @@ export default function AddPurchaseForm({ onAdded }) {
     const detected = detectPlatform(url)
     setForm(prev => {
       const newForm = { ...prev, url, platform: detected }
-      // Re-run category detection with new platform hint
-      const cat = detectCategory(prev.name, detected)
-      if (cat) { setCategoryAutoDetected(true); newForm.category = cat }
+      const cats = detectCategories(prev.name, detected)
+      if (cats.length) { setCategoryAutoDetected(true); newForm.categories = cats }
       return newForm
     })
   }
 
   const handleNameChange = (e) => {
     const name = e.target.value
-    const cat = detectCategory(name, form.platform)
-    setCategoryAutoDetected(!!cat)
-    setForm(prev => ({ ...prev, name, category: cat || prev.category }))
+    const cats = detectCategories(name, form.platform)
+    setCategoryAutoDetected(cats.length > 0)
+    setForm(prev => ({ ...prev, name, categories: cats.length ? cats : prev.categories }))
+  }
+
+  const toggleCategory = (value) => {
+    setCategoryAutoDetected(false)
+    setForm(prev => ({
+      ...prev,
+      categories: prev.categories.includes(value)
+        ? prev.categories.filter(c => c !== value)
+        : [...prev.categories, value],
+    }))
   }
 
   const handleSubmit = async (e) => {
@@ -103,14 +113,14 @@ export default function AddPurchaseForm({ onAdded }) {
       price: form.price.trim() || null,
       platform: form.platform.toLowerCase(),
       is_public: form.isPublic,
-      category: form.category,
+      categories: form.categories,
     })
     setLoading(false)
 
     if (result.ok) {
       showToast('Item added!', 'success')
       setCategoryAutoDetected(false)
-      setForm({ url: '', name: '', price: '', platform: 'Other', category: '', isPublic: true })
+      setForm({ url: '', name: '', price: '', platform: 'Other', categories: [], isPublic: true })
       setExpanded(false)
       onAdded?.(result.data)
     } else {
@@ -192,21 +202,27 @@ export default function AddPurchaseForm({ onAdded }) {
 
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="text-xs font-medium text-gray-400">Category</label>
-                {categoryAutoDetected && form.category && (
+                <label className="text-xs font-medium text-gray-400">Categories</label>
+                {categoryAutoDetected && form.categories.length > 0 && (
                   <span className="text-[10px] text-brand-400 font-medium">✨ Auto-detected</span>
                 )}
               </div>
-              <select
-                value={form.category}
-                onChange={e => { setCategoryAutoDetected(false); setForm(prev => ({ ...prev, category: e.target.value })) }}
-                className="bg-gray-900 border border-gray-700 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 rounded-xl px-4 py-2.5 text-white outline-none transition-all w-full"
-              >
-                <option value="">— Select a category —</option>
+              <div className="flex flex-wrap gap-1.5">
                 {CATEGORIES.map(c => (
-                  <option key={c.value} value={c.value}>{c.label}</option>
+                  <button
+                    type="button"
+                    key={c.value}
+                    onClick={() => toggleCategory(c.value)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
+                      form.categories.includes(c.value)
+                        ? 'bg-brand-500 text-white shadow-sm shadow-brand-500/30'
+                        : 'bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700'
+                    }`}
+                  >
+                    {c.label}
+                  </button>
                 ))}
-              </select>
+              </div>
             </div>
 
             <div className="flex items-center gap-3">

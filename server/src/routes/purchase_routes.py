@@ -62,7 +62,7 @@ def create_purchase_blueprint(
                 image_url=data.get("image_url", ""),
                 notes=data.get("notes", ""),
                 is_public=data.get("is_public", True),
-                category=data.get("category", ""),
+                categories=data.get("categories") or ([data["category"]] if data.get("category") else []),
             )
             return jsonify(purchase.to_dict()), 201
         except ValueError as exc:
@@ -95,6 +95,26 @@ def create_purchase_blueprint(
             return jsonify({"message": "Purchase deleted."}), 200
         except ValueError as exc:
             return jsonify({"error": str(exc)}), 400
+
+    # ------------------------------------------------------------------
+    # PATCH /api/purchases/<id>/category
+    # ------------------------------------------------------------------
+
+    @bp.route("/<purchase_id>/category", methods=["PATCH"])
+    @auth
+    def update_category(purchase_id):
+        """Update the categories of a purchase."""
+        data = request.get_json(silent=True) or {}
+        purchase = purchase_service.get_purchase_by_id(purchase_id)
+        if not purchase:
+            return jsonify({"error": "Purchase not found."}), 404
+        if purchase.user_id != g.current_user.id:
+            return jsonify({"error": "You do not own this purchase."}), 403
+        categories = data.get("categories", [])
+        if isinstance(categories, list):
+            purchase.categories = categories
+        updated = purchase_service._purchase_repo.save(purchase)
+        return jsonify(updated.to_dict()), 200
 
     # ------------------------------------------------------------------
     # PATCH /api/purchases/<id>/visibility

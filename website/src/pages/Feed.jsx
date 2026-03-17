@@ -83,7 +83,7 @@ export default function Feed() {
   }, [])
 
   const filtered = activeCategory
-    ? items.filter(i => i.category === activeCategory)
+    ? items.filter(i => (i.categories || []).includes(activeCategory))
     : items
 
 

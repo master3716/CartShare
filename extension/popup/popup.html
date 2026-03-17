@@ -74,21 +74,20 @@
     </div>
 
     <div id="add-form" class="hidden">
-      <label for="item-category">Category <span id="category-auto-label" style="color:#7c5cf6;font-size:11px;font-weight:600;display:none;">✨ Auto-detected</span></label>
-      <select id="item-category">
-        <option value="">— Select a category —</option>
-        <option value="electronics">🖥️ Electronics</option>
-        <option value="fashion">👗 Fashion</option>
-        <option value="home_kitchen">🏠 Home & Kitchen</option>
-        <option value="baby_kids">🍼 Baby & Kids</option>
-        <option value="beauty_health">💄 Beauty & Health</option>
-        <option value="sports">⚽ Sports & Outdoors</option>
-        <option value="books_media">📚 Books & Media</option>
-        <option value="toys_games">🎮 Toys & Games</option>
-        <option value="food">🍕 Food & Grocery</option>
-        <option value="pets">🐾 Pets</option>
-        <option value="other">📦 Other</option>
-      </select>
+      <label>Categories <span id="category-auto-label" style="color:#7c5cf6;font-size:11px;font-weight:600;display:none;">✨ Auto-detected</span></label>
+      <div id="item-categories" class="category-tags">
+        <button type="button" class="cat-tag" data-value="electronics">🖥️ Electronics</button>
+        <button type="button" class="cat-tag" data-value="fashion">👗 Fashion</button>
+        <button type="button" class="cat-tag" data-value="home_kitchen">🏠 Home & Kitchen</button>
+        <button type="button" class="cat-tag" data-value="baby_kids">🍼 Baby & Kids</button>
+        <button type="button" class="cat-tag" data-value="beauty_health">💄 Beauty & Health</button>
+        <button type="button" class="cat-tag" data-value="sports">⚽ Sports</button>
+        <button type="button" class="cat-tag" data-value="books_media">📚 Books & Media</button>
+        <button type="button" class="cat-tag" data-value="toys_games">🎮 Toys & Games</button>
+        <button type="button" class="cat-tag" data-value="food">🍕 Food</button>
+        <button type="button" class="cat-tag" data-value="pets">🐾 Pets</button>
+        <button type="button" class="cat-tag" data-value="other">📦 Other</button>
+      </div>
 
       <label for="item-notes">Notes (optional)</label>
       <input id="item-notes" type="text" placeholder="e.g. Great gift idea!" />

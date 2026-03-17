@@ -41,10 +41,12 @@ export const api = {
 
   // Purchases
   getMyPurchases: () => request('GET', '/purchases'),
+  getPurchases: () => request('GET', '/purchases'),
   getUserPurchases: (username) => request('GET', `/purchases/user/${username}`),
   addPurchase: (data) => request('POST', '/purchases', data),
   deletePurchase: (id) => request('DELETE', `/purchases/${id}`),
   toggleVisibility: (id) => request('PATCH', `/purchases/${id}/visibility`),
+  updateCategories: (id, categories) => request('PATCH', `/purchases/${id}/category`, { categories }),
   clickPurchase: (id) => request('POST', `/purchases/${id}/click`).catch(() => {}),
   getPurchaseStats: (ids) => request('GET', `/purchases/stats?ids=${ids.join(',')}`),
 

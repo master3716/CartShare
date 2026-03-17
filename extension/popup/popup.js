@@ -68,7 +68,7 @@ const main = {
   previewPrice: document.getElementById("preview-price"),
   previewPlatform: document.getElementById("preview-platform"),
   addForm: document.getElementById("add-form"),
-  itemCategory: document.getElementById("item-category"),
+  itemCategoriesEl: document.getElementById("item-categories"),
   categoryAutoLabel: document.getElementById("category-auto-label"),
   itemNotes: document.getElementById("item-notes"),
   itemPublic: document.getElementById("item-public"),
@@ -194,17 +194,21 @@ function populateItemPreview(item) {
     main.previewImage.style.display = "none";
   }
 
-  // Auto-detect and pre-select category
-  const detected = detectCategory(item.item_name, item.platform);
-  main.itemCategory.value = detected;
-  if (detected) {
-    main.categoryAutoLabel.style.display = "inline";
-  } else {
-    main.categoryAutoLabel.style.display = "none";
-  }
-  main.itemCategory.addEventListener("change", () => {
-    main.categoryAutoLabel.style.display = "none";
-  }, { once: true });
+  // Auto-detect and pre-select categories
+  const detectedCats = detectCategories(item.item_name, item.platform);
+  const catTags = main.itemCategoriesEl.querySelectorAll(".cat-tag");
+  catTags.forEach(btn => {
+    if (detectedCats.includes(btn.dataset.value)) {
+      btn.classList.add("active");
+    } else {
+      btn.classList.remove("active");
+    }
+    btn.addEventListener("click", () => {
+      btn.classList.toggle("active");
+      main.categoryAutoLabel.style.display = "none";
+    });
+  });
+  main.categoryAutoLabel.style.display = detectedCats.length ? "inline" : "none";
 
   show(main.itemPreview);
   show(main.addForm);
@@ -222,13 +226,16 @@ async function addCurrentItem() {
   main.btnAddItem.disabled = true;
   main.btnAddItem.textContent = "Saving…";
 
+  const selectedCats = [...main.itemCategoriesEl.querySelectorAll(".cat-tag.active")]
+    .map(btn => btn.dataset.value);
+
   const result = await sendToBackground({
     type: EXTENSION_CONSTANTS.MSG_ADD_PURCHASE,
     item: {
       ...currentItem,
       notes: main.itemNotes.value.trim(),
       is_public: main.itemPublic.checked,
-      category: main.itemCategory.value,
+      categories: selectedCats,
     },
   });
 
@@ -238,7 +245,7 @@ async function addCurrentItem() {
   if (result.success) {
     show(main.addSuccess);
     main.itemNotes.value = "";
-    main.itemCategory.value = "";
+    main.itemCategoriesEl.querySelectorAll(".cat-tag").forEach(b => b.classList.remove("active"));
     main.categoryAutoLabel.style.display = "none";
     main.itemPublic.checked = true;
   } else {
