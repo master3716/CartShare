@@ -11,7 +11,6 @@ import Collections from './pages/Collections'
 import Notifications from './pages/Notifications'
 import Profile from './pages/Profile'
 import Privacy from './pages/Privacy'
-import MyListings from './pages/MyListings'
 import { api } from './lib/api'
 
 function ProtectedRoute({ children }) {
@@ -41,9 +40,6 @@ function AppRoutes() {
       } />
       <Route path="/dashboard" element={
         <ProtectedRoute><Dashboard /></ProtectedRoute>
-      } />
-      <Route path="/my-listings" element={
-        <ProtectedRoute><MyListings /></ProtectedRoute>
       } />
       <Route path="/friends" element={
         <ProtectedRoute><Friends /></ProtectedRoute>
