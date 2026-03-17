@@ -5,6 +5,8 @@ import { useAuth } from '../contexts/AuthContext'
 import Layout from '../components/layout/Layout'
 import SocialCard from '../components/purchase/SocialCard'
 import EmptyState from '../components/ui/EmptyState'
+import { CATEGORIES } from '../components/purchase/AddPurchaseForm'
+import { Link } from 'react-router-dom'
 
 function SkeletonCard() {
   return (
@@ -33,30 +35,23 @@ export default function Feed() {
   const { user } = useAuth()
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
+  const [activeCategory, setActiveCategory] = useState('')
   const renderedIdsRef = useRef(new Set())
 
-  const loadFeed = async (isBackground = false) => {
-    if (!isBackground) {
-      const cached = cacheGet('feed')
-      if (cached && cached.length > 0) {
-        setItems(cached)
-        setLoading(false)
-        cached.forEach(item => renderedIdsRef.current.add(item.id))
-      }
+  const loadFeed = async () => {
+    const cached = cacheGet('feed')
+    if (cached && cached.length > 0) {
+      setItems(cached)
+      setLoading(false)
+      cached.forEach(item => renderedIdsRef.current.add(item.id))
     }
 
     const result = await api.getFriendsFeed()
     if (result.ok) {
       const fresh = result.data || []
       cacheSet('feed', fresh)
-      setItems(prev => {
-        const existingIds = new Set(prev.map(i => i.id))
-        const newItems = fresh.filter(i => !existingIds.has(i.id))
-        fresh.forEach(i => renderedIdsRef.current.add(i.id))
-        if (newItems.length > 0) return [...newItems, ...prev]
-        // Update existing items with fresh data
-        return fresh
-      })
+      fresh.forEach(i => renderedIdsRef.current.add(i.id))
+      setItems(fresh)
       setLoading(false)
     } else if (loading) {
       setLoading(false)
@@ -87,13 +82,53 @@ export default function Feed() {
     return () => clearInterval(statsInterval)
   }, [])
 
+  const filtered = activeCategory
+    ? items.filter(i => i.category === activeCategory)
+    : items
+
+  // Only show categories that actually have items in the feed
+  const availableCategories = CATEGORIES.filter(c =>
+    items.some(i => i.category === c.value)
+  )
+
   return (
     <Layout>
       <div className="max-w-2xl mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-6 animate-fade-in">
+        <div className="flex items-center justify-between mb-4 animate-fade-in">
           <h1 className="text-xl font-bold text-white">Friends' Feed</h1>
-          <span className="text-sm text-gray-500">{items.length} items</span>
+          <span className="text-sm text-gray-500">{filtered.length} items</span>
         </div>
+
+        {/* Category filter */}
+        {!loading && availableCategories.length > 0 && (
+          <div className="overflow-x-auto -mx-4 px-4 mb-6 animate-fade-in">
+            <div className="flex gap-2 pb-1" style={{ width: 'max-content' }}>
+              <button
+                onClick={() => setActiveCategory('')}
+                className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+                  activeCategory === ''
+                    ? 'bg-brand-500 text-white shadow-lg shadow-brand-500/25'
+                    : 'bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700'
+                }`}
+              >
+                ✨ All
+              </button>
+              {availableCategories.map(cat => (
+                <button
+                  key={cat.value}
+                  onClick={() => setActiveCategory(activeCategory === cat.value ? '' : cat.value)}
+                  className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+                    activeCategory === cat.value
+                      ? 'bg-brand-500 text-white shadow-lg shadow-brand-500/25'
+                      : 'bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700'
+                  }`}
+                >
+                  {cat.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {loading && (
           <div className="space-y-4">
@@ -105,23 +140,28 @@ export default function Feed() {
           <EmptyState
             icon="👥"
             title="Your feed is empty"
-            description="Add friends to see what they're buying. Start by sending a friend request!"
-            action={{ label: 'Find Friends', onClick: () => window.location.href = '/friends' }}
+            description="Add friends to see what they're buying!"
+            action={<Link to="/friends" className="bg-gradient-to-r from-brand-600 to-brand-500 text-white font-semibold px-5 py-2.5 rounded-xl text-sm">Find Friends</Link>}
           />
         )}
 
-        {items.length > 0 && (
+        {!loading && items.length > 0 && filtered.length === 0 && (
+          <EmptyState
+            icon="🔍"
+            title={`No ${CATEGORIES.find(c => c.value === activeCategory)?.label} items`}
+            description="None of your friends have shared anything in this category yet."
+          />
+        )}
+
+        {filtered.length > 0 && (
           <div className="space-y-6">
-            {items.map((item, index) => (
+            {filtered.map((item, index) => (
               <div
                 key={item.id}
                 style={{ animationDelay: `${Math.min(index * 0.08, 0.5)}s` }}
                 className="animate-fade-in-up [animation-fill-mode:both]"
               >
-                <SocialCard
-                  item={item}
-                  currentUserId={user?.id}
-                />
+                <SocialCard item={item} currentUser={user} />
               </div>
             ))}
           </div>

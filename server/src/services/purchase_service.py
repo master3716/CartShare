@@ -40,6 +40,7 @@ class PurchaseService:
         image_url: str = "",
         notes: str = "",
         is_public: bool = True,
+        category: str = "",
     ) -> Purchase:
         """
         Validate the incoming data and persist a new purchase.
@@ -71,6 +72,7 @@ class PurchaseService:
             image_url=image_url,
             notes=notes,
             is_public=is_public,
+            category=category,
         )
         return self._purchase_repo.save(purchase)
 

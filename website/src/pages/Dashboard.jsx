@@ -4,7 +4,7 @@ import { cacheGet, cacheSet } from '../lib/cache'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
 import Layout from '../components/layout/Layout'
-import AddPurchaseForm from '../components/purchase/AddPurchaseForm'
+import AddPurchaseForm, { CATEGORIES } from '../components/purchase/AddPurchaseForm'
 import SocialCard from '../components/purchase/SocialCard'
 import EmptyState from '../components/ui/EmptyState'
 import { Eye, EyeOff, Trash2 } from 'lucide-react'
@@ -96,6 +96,7 @@ export default function Dashboard() {
   const [purchases, setPurchases] = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all')
+  const [activeCategory, setActiveCategory] = useState('')
 
   useEffect(() => {
     const load = async () => {
@@ -144,10 +145,15 @@ export default function Dashboard() {
   })
 
   const filtered = purchases.filter(p => {
-    if (filter === 'public') return p.is_public
-    if (filter === 'private') return !p.is_public
+    if (filter === 'public' && !p.is_public) return false
+    if (filter === 'private' && p.is_public) return false
+    if (activeCategory && p.category !== activeCategory) return false
     return true
   })
+
+  const availableCategories = CATEGORIES.filter(c =>
+    purchases.some(p => p.category === c.value)
+  )
 
   return (
     <Layout>
@@ -159,20 +165,52 @@ export default function Dashboard() {
 
         <AddPurchaseForm onAdded={handleItemAdded} />
 
-        {/* Filter tabs */}
-        <div className="flex bg-gray-900 rounded-xl p-1 mb-6 w-fit animate-fade-in">
-          {['all', 'public', 'private'].map(f => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`px-4 py-1.5 rounded-lg text-sm font-medium capitalize transition-all ${
-                filter === f ? 'bg-brand-500 text-white shadow' : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              {f}
-            </button>
-          ))}
+        {/* Visibility + category filters */}
+        <div className="flex flex-wrap gap-3 mb-6 animate-fade-in">
+          <div className="flex bg-gray-900 rounded-xl p-1 w-fit">
+            {['all', 'public', 'private'].map(f => (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className={`px-4 py-1.5 rounded-lg text-sm font-medium capitalize transition-all ${
+                  filter === f ? 'bg-brand-500 text-white shadow' : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                {f}
+              </button>
+            ))}
+          </div>
         </div>
+
+        {availableCategories.length > 0 && (
+          <div className="overflow-x-auto -mx-4 px-4 mb-6 animate-fade-in">
+            <div className="flex gap-2 pb-1" style={{ width: 'max-content' }}>
+              <button
+                onClick={() => setActiveCategory('')}
+                className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+                  activeCategory === ''
+                    ? 'bg-brand-500 text-white shadow-lg shadow-brand-500/25'
+                    : 'bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700'
+                }`}
+              >
+                ✨ All
+              </button>
+              {availableCategories.map(cat => (
+                <button
+                  key={cat.value}
+                  onClick={() => setActiveCategory(activeCategory === cat.value ? '' : cat.value)}
+                  className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+                    activeCategory === cat.value
+                      ? 'bg-brand-500 text-white shadow-lg shadow-brand-500/25'
+                      : 'bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700'
+                  }`}
+                >
+                  {cat.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {loading && purchases.length === 0 ? (
           <div className="space-y-4">

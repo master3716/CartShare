@@ -17,6 +17,20 @@ function detectPlatform(url) {
 
 const platforms = ['Amazon', 'AliExpress', 'Temu', 'Shein', 'Etsy', 'Other']
 
+export const CATEGORIES = [
+  { value: 'electronics',   label: '🖥️ Electronics' },
+  { value: 'fashion',       label: '👗 Fashion' },
+  { value: 'home_kitchen',  label: '🏠 Home & Kitchen' },
+  { value: 'baby_kids',     label: '🍼 Baby & Kids' },
+  { value: 'beauty_health', label: '💄 Beauty & Health' },
+  { value: 'sports',        label: '⚽ Sports & Outdoors' },
+  { value: 'books_media',   label: '📚 Books & Media' },
+  { value: 'toys_games',    label: '🎮 Toys & Games' },
+  { value: 'food',          label: '🍕 Food & Grocery' },
+  { value: 'pets',          label: '🐾 Pets' },
+  { value: 'other',         label: '📦 Other' },
+]
+
 export default function AddPurchaseForm({ onAdded }) {
   const { showToast } = useToast()
   const [expanded, setExpanded] = useState(false)
@@ -26,6 +40,7 @@ export default function AddPurchaseForm({ onAdded }) {
     name: '',
     price: '',
     platform: 'Other',
+    category: '',
     isPublic: true,
   })
 
@@ -48,12 +63,13 @@ export default function AddPurchaseForm({ onAdded }) {
       price: form.price.trim() || null,
       platform: form.platform.toLowerCase(),
       is_public: form.isPublic,
+      category: form.category,
     })
     setLoading(false)
 
     if (result.ok) {
       showToast('Item added!', 'success')
-      setForm({ url: '', name: '', price: '', platform: 'Other', isPublic: true })
+      setForm({ url: '', name: '', price: '', platform: 'Other', category: '', isPublic: true })
       setExpanded(false)
       onAdded?.(result.data)
     } else {
@@ -131,6 +147,20 @@ export default function AddPurchaseForm({ onAdded }) {
                   ))}
                 </select>
               </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Category</label>
+              <select
+                value={form.category}
+                onChange={e => setForm(prev => ({ ...prev, category: e.target.value }))}
+                className="bg-gray-900 border border-gray-700 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 rounded-xl px-4 py-2.5 text-white outline-none transition-all w-full"
+              >
+                <option value="">— Select a category —</option>
+                {CATEGORIES.map(c => (
+                  <option key={c.value} value={c.value}>{c.label}</option>
+                ))}
+              </select>
             </div>
 
             <div className="flex items-center gap-3">

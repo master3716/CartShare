@@ -42,6 +42,7 @@ class Purchase:
     currency: str = ""
     image_url: str = ""
     notes: str = ""
+    category: str = ""
     click_count: int = 0
     also_buying: list = field(default_factory=list)   # list of user_ids also buying this item
     added_at: str = field(
@@ -65,6 +66,7 @@ class Purchase:
             "currency": self.currency,
             "image_url": self.image_url,
             "notes": self.notes,
+            "category": self.category,
             "click_count": self.click_count,
             "also_buying": self.also_buying,
             "added_at": self.added_at,
@@ -76,6 +78,6 @@ class Purchase:
         known = {
             "id", "user_id", "item_name", "product_url", "platform",
             "is_public", "price", "currency", "image_url", "notes",
-            "click_count", "also_buying", "added_at",
+            "category", "click_count", "also_buying", "added_at",
         }
         return Purchase(**{k: v for k, v in data.items() if k in known})

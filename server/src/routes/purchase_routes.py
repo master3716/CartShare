@@ -62,6 +62,7 @@ def create_purchase_blueprint(
                 image_url=data.get("image_url", ""),
                 notes=data.get("notes", ""),
                 is_public=data.get("is_public", True),
+                category=data.get("category", ""),
             )
             return jsonify(purchase.to_dict()), 201
         except ValueError as exc:
