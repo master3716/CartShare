@@ -1,38 +1,11 @@
 /**
  * popup/popup.js
- * ---------------
  * Controller for the extension popup UI.
- *
- * SOLID – Single Responsibility:
- *   This file ONLY handles the popup's DOM: reading user input, showing/
- *   hiding elements, and delegating work to the background service worker
- *   via chrome.runtime.sendMessage. It never calls fetch() directly.
- *
- * SOLID – Dependency Inversion:
- *   All network calls go through sendMessage → background.js → ApiClient.
- *   If the API client implementation changes, this file is unaffected.
- *
- * Lifecycle
- * ---------
- * 1. Popup opens → tell background (clears badge) → check storage for token.
- * 2. If token exists → show main view → ask content script for item data.
- * 3. If no token   → show auth view.
  */
 
-// ------------------------------------------------------------------
-// Utility: send a message to the background worker
-// ------------------------------------------------------------------
-
-/**
- * Wrap chrome.runtime.sendMessage in a Promise so we can use async/await.
- * @param {object} message
- * @returns {Promise<{success: boolean, data?: any, error?: string}>}
- */
 function sendToBackground(message) {
   return new Promise((resolve) => {
     chrome.runtime.sendMessage(message, (response) => {
-      // If the service worker was asleep it may not respond immediately.
-      // chrome.runtime.lastError tells us if the channel closed.
       if (chrome.runtime.lastError) {
         resolve({ success: false, error: chrome.runtime.lastError.message });
       } else {
@@ -42,25 +15,12 @@ function sendToBackground(message) {
   });
 }
 
-// ------------------------------------------------------------------
-// Utility: send a message to the content script in the active tab
-// ------------------------------------------------------------------
-
-/**
- * @param {object} message
- * @returns {Promise<{success: boolean, item?: object, error?: string}>}
- */
 async function sendToContentScript(message) {
   return new Promise((resolve) => {
-    // We must query the active tab to get its id.
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      if (!tabs[0]) {
-        resolve({ success: false, error: "No active tab." });
-        return;
-      }
+      if (!tabs[0]) { resolve({ success: false, error: "No active tab." }); return; }
       chrome.tabs.sendMessage(tabs[0].id, message, (response) => {
         if (chrome.runtime.lastError) {
-          // The content script isn't injected (e.g. it's not an Amazon page).
           resolve({ success: false, error: "Content script not available on this page." });
         } else {
           resolve(response || { success: false });
@@ -70,17 +30,13 @@ async function sendToContentScript(message) {
   });
 }
 
-// ------------------------------------------------------------------
-// Utility: show/hide elements
-// ------------------------------------------------------------------
-
 function show(el) { el.classList.remove("hidden"); }
 function hide(el) { el.classList.add("hidden"); }
 function showError(el, msg) { el.textContent = msg; show(el); }
 function hideError(el) { hide(el); }
 
 // ------------------------------------------------------------------
-// DOM references (cached once at startup)
+// DOM references
 // ------------------------------------------------------------------
 
 const views = {
@@ -118,52 +74,21 @@ const main = {
   addError: document.getElementById("add-error"),
   addSuccess: document.getElementById("add-success"),
   linkDashboard: document.getElementById("link-dashboard"),
-  shareForm: document.getElementById("share-form"),
-  shareUrl: document.getElementById("share-url"),
-  shareName: document.getElementById("share-name"),
-  sharePrice: document.getElementById("share-price"),
-  sharePlatform: document.getElementById("share-platform"),
-  sharePublic: document.getElementById("share-public"),
-  shareError: document.getElementById("share-error"),
-  shareSuccess: document.getElementById("share-success"),
-  feedLoading: document.getElementById("feed-loading"),
-  feedEmpty: document.getElementById("feed-empty"),
-  feedError: document.getElementById("feed-error"),
-  feedList: document.getElementById("feed-list"),
 };
 
-// Holds the extracted product data from the current tab.
 let currentItem = null;
-
-// ------------------------------------------------------------------
-// View switching helpers
-// ------------------------------------------------------------------
 
 function showView(viewName) {
   Object.values(views).forEach((v) => hide(v));
   show(views[viewName]);
 }
 
-// ------------------------------------------------------------------
-// Tab switcher (used inside auth view AND main view)
-// ------------------------------------------------------------------
-
-/**
- * Set up a tab switcher. `container` is the element that contains the
- * .tab-btn elements, and the elements with id matching each button's
- * data-tab attribute are the content panels.
- */
 function initTabSwitcher(container) {
   const buttons = container.querySelectorAll(".tab-btn");
   buttons.forEach((btn) => {
     btn.addEventListener("click", () => {
-      // Deactivate all buttons and hide all panels
       buttons.forEach((b) => b.classList.remove("active"));
-      buttons.forEach((b) => {
-        const panel = document.getElementById(b.dataset.tab);
-        if (panel) hide(panel);
-      });
-      // Activate clicked button and show its panel
+      buttons.forEach((b) => { const p = document.getElementById(b.dataset.tab); if (p) hide(p); });
       btn.classList.add("active");
       const panel = document.getElementById(btn.dataset.tab);
       if (panel) show(panel);
@@ -172,58 +97,43 @@ function initTabSwitcher(container) {
 }
 
 // ------------------------------------------------------------------
-// Auth view logic
+// Auth view
 // ------------------------------------------------------------------
 
 async function initAuthView() {
-  // Warn if server is unreachable
   const health = await sendToBackground({ type: "HEALTH_CHECK" });
-  if (!health.success) {
-    show(auth.serverWarning);
-  }
+  if (!health.success) show(auth.serverWarning);
 
-  // Wire tab switcher for Login/Register
   initTabSwitcher(views.auth);
 
-  // ---- Login form submission ----
   auth.loginForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     hideError(auth.loginError);
-    const email = auth.loginEmail.value.trim();
-    const password = auth.loginPassword.value;
-
     const result = await sendToBackground({
       type: "AUTH_LOGIN",
-      email,
-      password,
+      email: auth.loginEmail.value.trim(),
+      password: auth.loginPassword.value,
     });
-
     if (result.success) {
-      // Successfully logged in — switch to the main view.
       await initMainView(result.data.user);
     } else {
       showError(auth.loginError, result.error || "Login failed.");
     }
   });
 
-  // ---- Register form submission ----
   auth.registerForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     hideError(auth.registerError);
-
     const result = await sendToBackground({
       type: "AUTH_REGISTER",
       username: auth.regUsername.value.trim(),
       email: auth.regEmail.value.trim(),
       password: auth.regPassword.value,
     });
-
     if (result.success) {
-      // Registration successful — ask them to log in.
       auth.registerError.style.background = "#e8f5e9";
       auth.registerError.style.color = "#2e7d32";
       showError(auth.registerError, "Account created! Please log in.");
-      // Switch to login tab
       views.auth.querySelector('[data-tab="login-form"]').click();
     } else {
       showError(auth.registerError, result.error || "Registration failed.");
@@ -232,49 +142,26 @@ async function initAuthView() {
 }
 
 // ------------------------------------------------------------------
-// Main view logic
+// Main view
 // ------------------------------------------------------------------
 
 async function initMainView(user) {
   showView("main");
-
-  // Display the username
   main.usernameLabel.textContent = `@${user.username}`;
+  main.linkDashboard.href = `https://www.shoppycat.org/dashboard`;
 
-  // The dashboard link points to the user's public profile page on the website.
-  main.linkDashboard.href = `https://www.shoppycat.org/dashboard.html`;
-
-  // Wire tab switcher for Add / Share
-  initTabSwitcher(views.main);
-
-  // Wire logout button
   main.btnLogout.addEventListener("click", async () => {
     await sendToBackground({ type: "AUTH_LOGOUT" });
     showView("auth");
     await initAuthView();
   });
 
-  // Try to extract item data from the current tab
   await loadItemFromCurrentTab();
-
-  // Wire "Add Item" button
   main.btnAddItem.addEventListener("click", addCurrentItem);
-
-  // Wire "Share Past Purchase" form
-  main.shareForm.addEventListener("submit", shareManualItem);
-
-  // Lazy-load the friend feed when the tab is clicked
-  let feedLoaded = false;
-  views.main.querySelector('[data-tab="tab-feed"]').addEventListener("click", () => {
-    if (!feedLoaded) {
-      feedLoaded = true;
-      loadFriendsFeed();
-    }
-  });
 }
 
 // ------------------------------------------------------------------
-// Load item data from the current tab's content script
+// Item detection
 // ------------------------------------------------------------------
 
 async function loadItemFromCurrentTab() {
@@ -282,12 +169,9 @@ async function loadItemFromCurrentTab() {
   hide(main.itemPreview);
   hide(main.addForm);
 
-  const response = await sendToContentScript({
-    type: EXTENSION_CONSTANTS.MSG_GET_ITEM_DATA,
-  });
+  const response = await sendToContentScript({ type: EXTENSION_CONSTANTS.MSG_GET_ITEM_DATA });
 
   if (!response.success || !response.item || !response.item.item_name) {
-    // Content script not present (not on Amazon/AliExpress) or extraction failed
     show(main.noItemDetected);
     return;
   }
@@ -296,9 +180,6 @@ async function loadItemFromCurrentTab() {
   populateItemPreview(currentItem);
 }
 
-/**
- * Populate the product preview card and show the add form.
- */
 function populateItemPreview(item) {
   main.previewName.textContent = item.item_name || "Unknown product";
   main.previewPrice.textContent = item.price || "";
@@ -316,7 +197,7 @@ function populateItemPreview(item) {
 }
 
 // ------------------------------------------------------------------
-// Add the auto-detected item to the list
+// Add item
 // ------------------------------------------------------------------
 
 async function addCurrentItem() {
@@ -342,7 +223,6 @@ async function addCurrentItem() {
 
   if (result.success) {
     show(main.addSuccess);
-    // Reset form
     main.itemNotes.value = "";
     main.itemPublic.checked = true;
   } else {
@@ -351,115 +231,12 @@ async function addCurrentItem() {
 }
 
 // ------------------------------------------------------------------
-// Manually add a purchase by pasting a URL ("Share Past Purchase" tab)
-// ------------------------------------------------------------------
-
-async function shareManualItem(e) {
-  e.preventDefault();
-  hideError(main.shareError);
-  hide(main.shareSuccess);
-
-  const url = main.shareUrl.value.trim();
-  const name = main.shareName.value.trim();
-
-  if (!url || !name) {
-    showError(main.shareError, "URL and item name are required.");
-    return;
-  }
-
-  // Auto-detect platform from URL if the dropdown wasn't changed
-  let platform = main.sharePlatform.value;
-  if (!platform) {
-    platform = url.includes("aliexpress") ? "aliexpress" : "amazon";
-  }
-
-  const submitBtn = main.shareForm.querySelector("button[type='submit']");
-  submitBtn.disabled = true;
-  submitBtn.textContent = "Saving…";
-
-  const result = await sendToBackground({
-    type: EXTENSION_CONSTANTS.MSG_ADD_PURCHASE,
-    item: {
-      item_name: name,
-      product_url: url,
-      platform,
-      price: main.sharePrice.value.trim(),
-      currency: "",
-      image_url: "",
-      notes: "",
-      is_public: main.sharePublic.checked,
-      category: detectCategory(name, platform),
-    },
-  });
-
-  submitBtn.disabled = false;
-  submitBtn.textContent = "Add to My List";
-
-  if (result.success) {
-    show(main.shareSuccess);
-    main.shareForm.reset();
-  } else {
-    showError(main.shareError, result.error || "Failed to save.");
-  }
-}
-
-// ------------------------------------------------------------------
-// Friend feed
-// ------------------------------------------------------------------
-
-async function loadFriendsFeed() {
-  hide(main.feedEmpty);
-  hide(main.feedError);
-  main.feedList.innerHTML = "";
-  show(main.feedLoading);
-
-  const result = await sendToBackground({ type: "GET_FRIENDS_FEED" });
-
-  hide(main.feedLoading);
-
-  if (!result.success) {
-    showError(main.feedError, result.error || "Failed to load feed.");
-    return;
-  }
-
-  const items = result.data || [];
-  if (items.length === 0) {
-    show(main.feedEmpty);
-    return;
-  }
-
-  items.forEach((item) => {
-    main.feedList.appendChild(renderFeedItem(item));
-  });
-}
-
-function renderFeedItem(item) {
-  const el = document.createElement("div");
-  el.className = "feed-item";
-
-  const date = new Date(item.added_at);
-  const dateStr = date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-
-  el.innerHTML = `
-    <div class="feed-meta">
-      <span class="feed-username">@${item.friend_username}</span>
-      <span class="feed-date">${dateStr}</span>
-    </div>
-    <a class="feed-item-name" href="${item.product_url}" target="_blank">${item.item_name}</a>
-    ${item.price ? `<span class="feed-price">${item.price}</span>` : ""}
-  `;
-  return el;
-}
-
-// ------------------------------------------------------------------
-// Entry point: runs when the popup HTML is fully loaded
+// Entry point
 // ------------------------------------------------------------------
 
 (async function init() {
-  // Tell the background worker the popup opened (clears the badge)
   await sendToBackground({ type: "POPUP_OPENED" });
 
-  // Check if we have a stored token
   chrome.storage.local.get(
     [EXTENSION_CONSTANTS.STORAGE_KEY_TOKEN, EXTENSION_CONSTANTS.STORAGE_KEY_USER],
     async (result) => {
@@ -467,20 +244,13 @@ function renderFeedItem(item) {
       const user = result[EXTENSION_CONSTANTS.STORAGE_KEY_USER];
 
       if (token && user) {
-        // Show main view immediately with cached data for snappy UX,
-        // then validate the token in the background.
         await initMainView(user);
-
-        // Validate token: only log out on a real 401 — not on network errors
-        // (the Render server may be sleeping and take time to wake up).
         const validation = await sendToBackground({ type: "VALIDATE_TOKEN" });
         if (!validation.success && !validation.offline) {
-          // Token genuinely rejected by server — force re-login.
           showView("auth");
           await initAuthView();
         }
       } else {
-        // Not logged in
         showView("auth");
         await initAuthView();
       }
