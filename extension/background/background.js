@@ -27,9 +27,11 @@
  * Responses are: { success: true, data: ... } or { success: false, error: "..." }.
  */
 
-// Import shared files.  In a service worker we use importScripts() because
-// ES module `import` is not yet universally supported in MV3 workers.
-importScripts("../shared/constants.js", "../shared/api_client.js");
+// Import shared files in Chrome service worker context.
+// In Firefox, these are pre-loaded via the manifest scripts array instead.
+if (typeof EXTENSION_CONSTANTS === "undefined") {
+  importScripts("../shared/constants.js", "../shared/api_client.js");
+}
 
 // ------------------------------------------------------------------
 // Badge helpers
