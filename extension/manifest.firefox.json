@@ -1,0 +1,81 @@
+{
+  "manifest_version": 3,
+  "name": "ShoppyCat",
+  "version": "1.3.0",
+  "description": "Save items from Amazon, AliExpress, Temu, SHEIN, and Etsy to your ShoppyCat list, and see what your friends are buying.",
+
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "shoppycat@shoppycat.org",
+      "strict_min_version": "109.0"
+    }
+  },
+
+  "permissions": [
+    "storage",
+    "activeTab"
+  ],
+
+  "host_permissions": [
+    "https://www.amazon.com/*",
+    "https://www.amazon.co.uk/*",
+    "https://www.amazon.de/*",
+    "https://www.amazon.fr/*",
+    "https://www.amazon.co.jp/*",
+    "https://www.amazon.ca/*",
+    "https://www.amazon.com.au/*",
+    "https://*.aliexpress.com/*",
+    "https://*.aliexpress.us/*",
+    "https://www.shein.com/*",
+    "https://us.shein.com/*",
+    "https://www.temu.com/*",
+    "https://www.etsy.com/*",
+    "https://www.shoppycat.org/*"
+  ],
+
+  "background": {
+    "service_worker": "background/background.js"
+  },
+
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.amazon.com/*",
+        "https://www.amazon.co.uk/*",
+        "https://www.amazon.de/*",
+        "https://www.amazon.fr/*",
+        "https://www.amazon.co.jp/*",
+        "https://www.amazon.ca/*",
+        "https://www.amazon.com.au/*",
+        "https://*.aliexpress.com/*",
+        "https://*.aliexpress.us/*",
+        "https://www.shein.com/*",
+        "https://us.shein.com/*",
+        "https://www.temu.com/*",
+        "https://www.etsy.com/*"
+      ],
+      "js": [
+        "shared/constants.js",
+        "content_scripts/item_extractor.js",
+        "content_scripts/checkout_detector.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "ShoppyCat",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}
