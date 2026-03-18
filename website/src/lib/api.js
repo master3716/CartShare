@@ -93,6 +93,4 @@ export const api = {
   markNotificationRead: (id) => request('POST', `/notifications/${id}/read`),
   markAllNotificationsRead: () => request('POST', '/notifications/read-all'),
 
-  // Health
-  ping: () => request('GET', '/health').catch(() => {}),
 }

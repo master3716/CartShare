@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { ToastProvider } from './contexts/ToastContext'
@@ -11,7 +11,6 @@ import Collections from './pages/Collections'
 import Notifications from './pages/Notifications'
 import Profile from './pages/Profile'
 import Privacy from './pages/Privacy'
-import { api } from './lib/api'
 
 function ProtectedRoute({ children }) {
   const { isLoggedIn } = useAuth()
@@ -21,14 +20,6 @@ function ProtectedRoute({ children }) {
 
 function AppRoutes() {
   const { isLoggedIn } = useAuth()
-
-  // Keep server alive every 14 minutes
-  useEffect(() => {
-    const ping = () => api.ping()
-    ping()
-    const interval = setInterval(ping, 14 * 60 * 1000)
-    return () => clearInterval(interval)
-  }, [])
 
   return (
     <Routes>
