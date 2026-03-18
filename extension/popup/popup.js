@@ -152,11 +152,11 @@ async function initMainView(user) {
   main.usernameLabel.textContent = `@${user.username}`;
   main.linkDashboard.href = `https://www.shoppycat.org/dashboard`;
 
-  main.btnLogout.addEventListener("click", async () => {
+  main.btnLogout.onclick = async () => {
     await sendToBackground({ type: "AUTH_LOGOUT" });
     showView("auth");
     await initAuthView();
-  });
+  };
 
   await loadItemFromCurrentTab();
   main.btnAddItem.addEventListener("click", addCurrentItem);
