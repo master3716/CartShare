@@ -125,7 +125,7 @@ export default function Auth() {
                 onChange={e => setForm(p => ({ ...p, password: e.target.value }))}
                 placeholder="••••••••"
                 required
-                minLength={6}
+                minLength={tab === 'register' ? 6 : undefined}
                 className={inputClass}
               />
             </div>

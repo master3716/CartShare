@@ -64,6 +64,8 @@ def create_auth_blueprint(user_service: UserService, user_repo) -> Blueprint:
         # Basic presence checks; the service does deeper validation.
         if not username or not email or not password:
             return jsonify({"error": "username, email, and password are required."}), 400
+        if len(password) < 6:
+            return jsonify({"error": "Password must be at least 6 characters."}), 400
 
         try:
             user = user_service.register(username, email, password)

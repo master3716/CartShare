@@ -150,7 +150,7 @@ async function initAuthView() {
 async function initMainView(user) {
   showView("main");
   main.usernameLabel.textContent = `@${user.username}`;
-  main.linkDashboard.href = `https://www.shoppycat.org/dashboard`;
+  main.linkDashboard.href = `https://www.shoppycat.org/`;
 
   main.btnLogout.onclick = async () => {
     await sendToBackground({ type: "AUTH_LOGOUT" });
